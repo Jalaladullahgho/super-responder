@@ -89,7 +89,7 @@ form.addEventListener("submit", async (event) => {
   } catch (error) {
     console.error(error);
     addMessage(
-      "تعذر الاتصال بخدمة الدعم حاليًا. حاول مرة أخرى.",
+      `خطأ الاتصال: ${error.message}`,
       "support"
     );
     statusText.textContent = "تعذر الاتصال";
