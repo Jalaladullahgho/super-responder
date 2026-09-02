@@ -4,6 +4,9 @@ const SUPABASE_FUNCTION_URL =
 const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_9Nl91eoKWdraNH_kw2cCIg_GHRn-IJJ";
 
+const params = new URLSearchParams(window.location.search);
+const macAddress = params.get("mac_address")?.trim() || "";
+
 const form = document.getElementById("chat-form");
 const input = document.getElementById("message-input");
 const messages = document.getElementById("messages");
@@ -38,6 +41,7 @@ async function sendMessage(message) {
       "apikey": SUPABASE_PUBLISHABLE_KEY
     },
     body: JSON.stringify({
+      mac_address: macAddress,
       message
     })
   });
