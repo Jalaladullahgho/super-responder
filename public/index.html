@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الدعم الفني</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="chat-app">
+    <header class="chat-header">
+      <div>
+        <h1>الدعم الفني</h1>
+        <p id="status">متصل</p>
+      </div>
+      <div class="support-icon">💬</div>
+    </header>
+
+    <section id="messages" class="messages">
+      <div class="message support">
+        <div class="bubble">
+          مرحبًا بك 👋<br>
+          كيف يمكننا مساعدتك؟
+        </div>
+      </div>
+    </section>
+
+    <form id="chat-form" class="chat-form">
+      <input
+        id="message-input"
+        type="text"
+        placeholder="اكتب رسالتك..."
+        autocomplete="off"
+        maxlength="1000"
+      >
+      <button id="send-button" type="submit">إرسال</button>
+    </form>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
