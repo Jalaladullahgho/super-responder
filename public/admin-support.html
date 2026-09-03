@@ -5,268 +5,34 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Admin Support</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;font-family:Arial,sans-serif;background:#f3f5f7;color:#17202a}
-header{height:64px;background:#111827;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 20px}
-header h1{font-size:20px;margin:0}
-#state{font-size:13px;color:#a7f3d0}
-.layout{display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 64px)}
-.sidebar{background:#fff;border-left:1px solid #ddd;overflow:auto}
-.sidehead{padding:15px;border-bottom:1px solid #eee;font-weight:bold}
-.conversation{padding:14px;border-bottom:1px solid #eee;cursor:pointer}
-.conversation:hover,.conversation.active{background:#eef2ff}
-.mac{font-weight:bold;font-size:14px}
-.meta{font-size:12px;color:#6b7280;margin-top:5px}
-.chat{display:flex;flex-direction:column;min-width:0}
-.chathead{background:#fff;border-bottom:1px solid #ddd;padding:14px}
-#clientTitle{font-weight:bold}
-#clientMeta{font-size:12px;color:#6b7280;margin-top:4px}
-#messages{flex:1;overflow:auto;padding:18px}
-.msg{display:flex;margin:8px 0}
-.msg.client{justify-content:flex-start}
-.msg.support{justify-content:flex-end}
-.bubble{max-width:75%;padding:10px 13px;border-radius:14px;line-height:1.5;white-space:pre-wrap}
-.client .bubble{background:#fff;border:1px solid #ddd}
-.support .bubble{background:#2563eb;color:#fff}
-.time{font-size:10px;opacity:.65;margin-top:4px}
-.composer{background:#fff;border-top:1px solid #ddd;padding:12px;display:flex;gap:8px}
-.composer input{flex:1;border:1px solid #ccc;border-radius:10px;padding:12px;font-size:15px;direction:rtl}
-.composer button{border:0;background:#2563eb;color:#fff;border-radius:10px;padding:0 20px;font-size:15px}
-.composer button:disabled{opacity:.5}
-.empty{height:100%;display:flex;align-items:center;justify-content:center;color:#777}
-@media(max-width:700px){
-.layout{grid-template-columns:1fr}
-.sidebar{height:38vh}
-.chat{height:62vh}
-}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f3f5f7;color:#17202a}header{height:64px;background:#111827;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 20px}header h1{font-size:20px;margin:0}#state{font-size:13px;color:#a7f3d0}.layout{display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 64px)}.sidebar{background:#fff;border-left:1px solid #ddd;overflow:auto}.sidehead{padding:15px;border-bottom:1px solid #eee;font-weight:bold}.conversation{padding:14px;border-bottom:1px solid #eee;cursor:pointer}.conversation:hover,.conversation.active{background:#eef2ff}.mac{font-weight:bold;font-size:14px}.meta{font-size:12px;color:#6b7280;margin-top:5px}.chat{display:flex;flex-direction:column;min-width:0}.chathead{background:#fff;border-bottom:1px solid #ddd;padding:14px}#clientTitle{font-weight:bold}#clientMeta{font-size:12px;color:#6b7280;margin-top:4px}#messages{flex:1;overflow:auto;padding:18px}.msg{display:flex;margin:8px 0}.msg.client{justify-content:flex-start}.msg.support{justify-content:flex-end}.bubble{max-width:75%;padding:10px 13px;border-radius:14px;line-height:1.5;white-space:pre-wrap}.client .bubble{background:#fff;border:1px solid #ddd}.support .bubble{background:#2563eb;color:#fff}.time{font-size:10px;opacity:.65;margin-top:4px}.composer{background:#fff;border-top:1px solid #ddd;padding:12px;display:flex;gap:8px}.composer input{flex:1;border:1px solid #ccc;border-radius:10px;padding:12px;font-size:15px;direction:rtl}.composer button{border:0;background:#2563eb;color:#fff;border-radius:10px;padding:0 20px;font-size:15px}.composer button:disabled{opacity:.5}.empty{height:100%;display:flex;align-items:center;justify-content:center;color:#777}@media(max-width:700px){.layout{grid-template-columns:1fr}.sidebar{height:38vh}.chat{height:62vh}}
 </style>
 </head>
 <body>
-
-<header>
-<h1>Admin Support</h1>
-<div id="state">جاري الاتصال...</div>
-</header>
-
+<header><h1>Admin Support</h1><div id="state">جاري الاتصال...</div></header>
 <div class="layout">
-
-<aside class="sidebar">
-<div class="sidehead">المحادثات</div>
-<div id="conversationList"></div>
-</aside>
-
+<aside class="sidebar"><div class="sidehead">المحادثات</div><div id="conversationList"></div></aside>
 <main class="chat">
-<div class="chathead">
-<div id="clientTitle">اختر محادثة</div>
-<div id="clientMeta"></div>
-</div>
-
-<div id="messages">
-<div class="empty">لا توجد محادثة محددة</div>
-</div>
-
-<form class="composer" id="replyForm">
-<input id="replyInput" placeholder="اكتب رد الدعم..." autocomplete="off">
-<button id="sendBtn" type="submit">إرسال</button>
-</form>
+<div class="chathead"><div id="clientTitle">اختر محادثة</div><div id="clientMeta"></div></div>
+<div id="messages"><div class="empty">لا توجد محادثة محددة</div></div>
+<form class="composer" id="replyForm"><input id="replyInput" placeholder="اكتب رد الدعم..." autocomplete="off"><button id="sendBtn" type="submit">إرسال</button></form>
 </main>
-
 </div>
-
 <script>
 const SUPABASE_URL="https://quylfcqnzubxedlatzpv.supabase.co";
-
-let SUPABASE_KEY="";
-let conversations=[];
-let clients=[];
-let selectedConversation=null;
-
-async function loadKey(){
-  const r=await fetch("/app.js");
-  const t=await r.text();
-  const m=t.match(/const SUPABASE_PUBLISHABLE_KEY\\s*=\\s*["']([^"']+)["']/);
-  if(!m) throw new Error("لم يتم العثور على مفتاح Supabase");
-  SUPABASE_KEY=m[1];
-}
-
-async function api(path,options={}){
-  const r=await fetch(SUPABASE_URL+path,{
-    ...options,
-    headers:{
-      "apikey":SUPABASE_KEY,
-      "Authorization":"Bearer "+SUPABASE_KEY,
-      "Content-Type":"application/json",
-      ...(options.headers||{})
-    }
-  });
-  const text=await r.text();
-  let data;
-  try{data=JSON.parse(text)}catch{data=text}
-  if(!r.ok) throw new Error(
-    typeof data==="string"?data:
-    data?.message||data?.error||("HTTP "+r.status)
-  );
-  return data;
-}
-
-function fmt(d){
-  if(!d)return "";
-  return new Date(d).toLocaleString("ar-YE",{
-    dateStyle:"short",timeStyle:"short"
-  });
-}
-
-function clientById(id){
-  return clients.find(x=>String(x.id)===String(id));
-}
-
-function renderConversations(){
-  const box=document.getElementById("conversationList");
-  if(!conversations.length){
-    box.innerHTML='<div class="empty" style="height:120px">لا توجد محادثات</div>';
-    return;
-  }
-
-  box.innerHTML=conversations.map(c=>{
-    const cl=clientById(c.client_id);
-    const mac=cl?.mac_address||"بدون MAC";
-    const username=cl?.username||"";
-    return `
-      <div class="conversation ${String(c.id)===String(selectedConversation)?"active":""}"
-           onclick="openConversation(${c.id})">
-        <div class="mac">${mac}</div>
-        <div class="meta">${username||"عميل"} · ${fmt(c.updated_at)}</div>
-        <div class="meta">الحالة: ${c.status||"open"}</div>
-      </div>`;
-  }).join("");
-}
-
-async function loadBase(){
-  conversations=await api(
-    "/rest/v1/conversations?select=id,client_id,status,created_at,updated_at&order=updated_at.desc"
-  );
-
-  clients=await api(
-    "/rest/v1/clients?select=id,mac_address,username,last_seen_at"
-  );
-
-  renderConversations();
-
-  document.getElementById("state").textContent="متصل";
-}
-
-async function openConversation(id){
-  selectedConversation=id;
-  renderConversations();
-
-  const c=conversations.find(x=>String(x.id)===String(id));
-  const cl=c?clientById(c.client_id):null;
-
-  document.getElementById("clientTitle").textContent=
-    cl?.mac_address||"عميل";
-  document.getElementById("clientMeta").textContent=
-    (cl?.username||"")+
-    (cl?.last_seen_at?" · آخر ظهور "+fmt(cl.last_seen_at):"");
-
-  await loadMessages();
-}
-
-async function loadMessages(){
-  if(!selectedConversation)return;
-
-  const data=await api(
-    "/rest/v1/messages?select=id,conversation_id,sender,message,created_at&conversation_id=eq."+selectedConversation+"&order=created_at.asc"
-  );
-
-  const box=document.getElementById("messages");
-
-  if(!data.length){
-    box.innerHTML='<div class="empty">لا توجد رسائل بعد</div>';
-    return;
-  }
-
-  box.innerHTML=data.map(m=>`
-    <div class="msg ${m.sender==="support"?"support":"client"}">
-      <div>
-        <div class="bubble">${escapeHtml(m.message)}</div>
-        <div class="time">${fmt(m.created_at)}</div>
-      </div>
-    </div>
-  `).join("");
-
-  box.scrollTop=box.scrollHeight;
-}
-
-function escapeHtml(v){
-  return String(v??"").replace(/[&<>"']/g,s=>({
-    "&":"&amp;","<":"&lt;",">":"&gt;",
-    '"':"&quot;","'":"&#039;"
-  }[s]));
-}
-
-document.getElementById("replyForm").addEventListener("submit",async e=>{
-  e.preventDefault();
-
-  if(!selectedConversation){
-    alert("اختر محادثة أولاً");
-    return;
-  }
-
-  const input=document.getElementById("replyInput");
-  const btn=document.getElementById("sendBtn");
-  const message=input.value.trim();
-
-  if(!message)return;
-
-  btn.disabled=true;
-
-  try{
-    await api("/rest/v1/messages",{
-      method:"POST",
-      headers:{
-        "Prefer":"return=minimal"
-      },
-      body:JSON.stringify({
-        conversation_id:selectedConversation,
-        sender:"support",
-        message
-      })
-    });
-
-    input.value="";
-    await loadMessages();
-    await loadBase();
-    renderConversations();
-  }catch(err){
-    alert("خطأ: "+err.message);
-  }finally{
-    btn.disabled=false;
-    input.focus();
-  }
-});
-
-async function refresh(){
-  try{
-    await loadBase();
-    if(selectedConversation) await loadMessages();
-  }catch(err){
-    console.error(err);
-    document.getElementById("state").textContent="خطأ اتصال";
-  }
-}
-
-(async()=>{
-  try{
-    await loadKey();
-    await refresh();
-    setInterval(refresh,5000);
-  }catch(err){
-    console.error(err);
-    document.getElementById("state").textContent="خطأ";
-    alert(err.message);
-  }
-})();
+let SUPABASE_KEY="",conversations=[],clients=[],selectedConversation=null;
+async function loadKey(){const r=await fetch("/app.js"),t=await r.text(),m=t.match(/const SUPABASE_PUBLISHABLE_KEY\s*=\s*["']([^"']+)["']/);if(!m)throw new Error("لم يتم العثور على مفتاح Supabase");SUPABASE_KEY=m[1]}
+async function api(path,options={}){const r=await fetch(SUPABASE_URL+path,{...options,headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json",...(options.headers||{})}}),text=await r.text();let data;try{data=JSON.parse(text)}catch{data=text}if(!r.ok)throw new Error(typeof data==="string"?data:data?.message||data?.error||("HTTP "+r.status));return data}
+function fmt(d){if(!d)return "";return new Date(d).toLocaleString("ar-YE",{dateStyle:"short",timeStyle:"short"})}
+function clientById(id){return clients.find(x=>String(x.id)===String(id))}
+function renderConversations(){const box=document.getElementById("conversationList");if(!conversations.length){box.innerHTML='<div class="empty" style="height:120px">لا توجد محادثات</div>';return}box.innerHTML=conversations.map(c=>{const cl=clientById(c.client_id),mac=cl?.mac_address||"بدون MAC",username=cl?.username||"";return `<div class="conversation ${String(c.id)===String(selectedConversation)?"active":""}" onclick="openConversation(${c.id})"><div class="mac">${mac}</div><div class="meta">${username||"عميل"} · ${fmt(c.updated_at)}</div><div class="meta">الحالة: ${c.status||"open"}</div></div>`}).join("")}
+async function loadBase(){conversations=await api("/rest/v1/conversations?select=id,client_id,status,created_at,updated_at&order=updated_at.desc");clients=await api("/rest/v1/clients?select=id,mac_address,username,last_seen_at");renderConversations();document.getElementById("state").textContent="متصل"}
+async function openConversation(id){selectedConversation=id;renderConversations();const c=conversations.find(x=>String(x.id)===String(id)),cl=c?clientById(c.client_id):null;document.getElementById("clientTitle").textContent=cl?.mac_address||"عميل";document.getElementById("clientMeta").textContent=(cl?.username||"")+(cl?.last_seen_at?" · آخر ظهور "+fmt(cl.last_seen_at):"");await loadMessages()}
+async function loadMessages(){if(!selectedConversation)return;const data=await api("/rest/v1/messages?select=id,conversation_id,sender,message,created_at&conversation_id=eq."+selectedConversation+"&order=created_at.asc"),box=document.getElementById("messages");if(!data.length){box.innerHTML='<div class="empty">لا توجد رسائل بعد</div>';return}box.innerHTML=data.map(m=>`<div class="msg ${m.sender==="support"?"support":"client"}"><div><div class="bubble">${escapeHtml(m.message)}</div><div class="time">${fmt(m.created_at)}</div></div></div>`).join("");box.scrollTop=box.scrollHeight}
+function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[s]))}
+document.getElementById("replyForm").addEventListener("submit",async e=>{e.preventDefault();if(!selectedConversation){alert("اختر محادثة أولاً");return}const input=document.getElementById("replyInput"),btn=document.getElementById("sendBtn"),message=input.value.trim();if(!message)return;btn.disabled=true;try{await api("/rest/v1/messages",{method:"POST",headers:{"Prefer":"return=minimal"},body:JSON.stringify({conversation_id:selectedConversation,sender:"support",message})});input.value="";await loadMessages();await loadBase();renderConversations()}catch(err){alert("خطأ: "+err.message)}finally{btn.disabled=false;input.focus()}})
+async function refresh(){try{await loadBase();if(selectedConversation)await loadMessages()}catch(err){console.error(err);document.getElementById("state").textContent="خطأ اتصال"}}
+(async()=>{try{await loadKey();await refresh();setInterval(refresh,5000)}catch(err){console.error(err);document.getElementById("state").textContent="خطأ";alert(err.message)}})();
 </script>
-
 </body>
 </html>
