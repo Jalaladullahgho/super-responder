@@ -32,6 +32,52 @@ function setLoading(loading) {
   sendButton.textContent = loading ? "..." : "إرسال";
 }
 
+function extractReply(value, depth = 0) {
+  if (value == null || depth > 6) return "";
+
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const text = extractReply(item, depth + 1);
+      if (text) return text;
+    }
+    return "";
+  }
+
+  if (typeof value === "object") {
+    const preferredKeys = [
+      "reply",
+      "response",
+      "message",
+      "text",
+      "content",
+      "output_text",
+      "answer"
+    ];
+
+    for (const key of preferredKeys) {
+      if (key in value) {
+        const text = extractReply(value[key], depth + 1);
+        if (text) return text;
+      }
+    }
+
+    if (Array.isArray(value.output)) {
+      const text = extractReply(value.output, depth + 1);
+      if (text) return text;
+    }
+
+    if (Array.isArray(value.choices)) {
+      const text = extractReply(value.choices, depth + 1);
+      if (text) return text;
+    }
+  }
+
+  return "";
+}
+
 async function sendMessage(message) {
   const response = await fetch(SUPABASE_FUNCTION_URL, {
     method: "POST",
@@ -81,14 +127,9 @@ form.addEventListener("submit", async (event) => {
   try {
     const data = await sendMessage(message);
 
-    const reply =
-      data.reply ??
-      data.response ??
-      data.message ??
-      data.text ??
-      "تم استلام رسالتك.";
+    const reply = extractReply(data);
 
-    addMessage(String(reply), "support");
+    addMessage(reply || "تم استلام رسالتك.", "support");
     statusText.textContent = "متصل";
   } catch (error) {
     console.error(error);
