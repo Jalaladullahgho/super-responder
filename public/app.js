@@ -1,6 +1,7 @@
 const SUPABASE_FUNCTION_URL =
   "https://quylfcqnzubxedlatzpv.supabase.co/functions/v1/super-responder";
 
+const SUPABASE_URL = "https://quylfcqnzubxedlatzpv.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_9Nl91eoKWdraNH_kw2cCIg_GHRn-IJJ";
 
@@ -13,7 +14,76 @@ const messages = document.getElementById("messages");
 const sendButton = document.getElementById("send-button");
 const statusText = document.getElementById("status");
 
-function addMessage(text, type) {
+let currentConversationId = null;
+let loadingHistory = false;
+let lastRenderedSignature = "";
+
+function authHeaders(extra = {}) {
+  return {
+    apikey: SUPABASE_PUBLISHABLE_KEY,
+    Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+    "Content-Type": "application/json",
+    ...extra
+  };
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  }[char]));
+}
+
+function formatTime(value) {
+  if (!value) return "";
+  try {
+    return new Date(value).toLocaleTimeString("ar-YE", {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  } catch {
+    return "";
+  }
+}
+
+function renderMessages(data) {
+  const signature = JSON.stringify(data.map((m) => [
+    m.id,
+    m.sender,
+    m.message,
+    m.created_at
+  ]));
+
+  if (signature === lastRenderedSignature) return;
+  lastRenderedSignature = signature;
+
+  messages.innerHTML = "";
+
+  for (const item of data) {
+    const type = item.sender === "client" ? "user" : "support";
+    const wrapper = document.createElement("div");
+    wrapper.className = `message ${type}`;
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.innerHTML = escapeHtml(item.message).replace(/\n/g, "<br>");
+
+    const time = document.createElement("div");
+    time.className = "message-time";
+    time.textContent = formatTime(item.created_at);
+    bubble.appendChild(time);
+
+    wrapper.appendChild(bubble);
+    messages.appendChild(wrapper);
+  }
+
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function addLocalMessage(text, type) {
   const wrapper = document.createElement("div");
   wrapper.className = `message ${type}`;
 
@@ -32,68 +102,89 @@ function setLoading(loading) {
   sendButton.textContent = loading ? "..." : "إرسال";
 }
 
-function extractReply(value, depth = 0) {
-  if (value == null || depth > 6) return "";
+async function supabaseGet(path) {
+  const response = await fetch(`${SUPABASE_URL}${path}`, {
+    headers: authHeaders()
+  });
 
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const text = extractReply(item, depth + 1);
-      if (text) return text;
-    }
-    return "";
+  const text = await response.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = text;
   }
 
-  if (typeof value === "object") {
-    const preferredKeys = [
-      "reply",
-      "response",
-      "message",
-      "text",
-      "content",
-      "output_text",
-      "answer"
-    ];
-
-    for (const key of preferredKeys) {
-      if (key in value) {
-        const text = extractReply(value[key], depth + 1);
-        if (text) return text;
-      }
-    }
-
-    if (Array.isArray(value.output)) {
-      const text = extractReply(value.output, depth + 1);
-      if (text) return text;
-    }
-
-    if (Array.isArray(value.choices)) {
-      const text = extractReply(value.choices, depth + 1);
-      if (text) return text;
-    }
+  if (!response.ok) {
+    throw new Error(
+      typeof data === "string"
+        ? data
+        : data?.message || data?.error || `HTTP ${response.status}`
+    );
   }
 
-  return "";
+  return data;
+}
+
+async function findConversation() {
+  if (!macAddress) return null;
+
+  const clients = await supabaseGet(
+    `/rest/v1/clients?select=id,mac_address&mac_address=eq.${encodeURIComponent(macAddress)}&limit=1`
+  );
+
+  if (!clients.length) return null;
+
+  const clientId = clients[0].id;
+
+  const conversations = await supabaseGet(
+    `/rest/v1/conversations?select=id,client_id,status,created_at,updated_at&client_id=eq.${clientId}&order=updated_at.desc&limit=1`
+  );
+
+  if (!conversations.length) return null;
+
+  currentConversationId = conversations[0].id;
+  return conversations[0];
+}
+
+async function loadHistory() {
+  if (!macAddress || loadingHistory) return;
+  loadingHistory = true;
+
+  try {
+    const conversation = await findConversation();
+
+    if (!conversation) {
+      statusText.textContent = "متصل";
+      return;
+    }
+
+    const data = await supabaseGet(
+      `/rest/v1/messages?select=id,conversation_id,sender,message,created_at&conversation_id=eq.${conversation.id}&order=created_at.asc`
+    );
+
+    renderMessages(data);
+    statusText.textContent = "متصل";
+  } catch (error) {
+    console.error(error);
+    statusText.textContent = "تعذر تحميل المحادثة";
+  } finally {
+    loadingHistory = false;
+  }
 }
 
 async function sendMessage(message) {
   const response = await fetch(SUPABASE_FUNCTION_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-      "apikey": SUPABASE_PUBLISHABLE_KEY
-    },
+    headers: authHeaders(),
     body: JSON.stringify({
       mac_address: macAddress,
-      message
+      message,
+      conversation_id: currentConversationId
     })
   });
 
   const text = await response.text();
-
   let data;
   try {
     data = JSON.parse(text);
@@ -103,11 +194,12 @@ async function sendMessage(message) {
 
   if (!response.ok) {
     throw new Error(
-      data?.error ||
-      data?.message ||
-      data?.raw ||
-      `HTTP ${response.status}`
+      data?.error || data?.message || data?.raw || `HTTP ${response.status}`
     );
+  }
+
+  if (data?.conversation_id) {
+    currentConversationId = data.conversation_id;
   }
 
   return data;
@@ -117,29 +209,35 @@ form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const message = input.value.trim();
-  if (!message) return;
+  if (!message || !macAddress) return;
 
-  addMessage(message, "user");
+  addLocalMessage(message, "user");
   input.value = "";
   setLoading(true);
-  statusText.textContent = "جارٍ الرد...";
+  statusText.textContent = "جاري الإرسال...";
 
   try {
-    const data = await sendMessage(message);
-
-    const reply = extractReply(data);
-
-    addMessage(reply || "تم استلام رسالتك.", "support");
+    await sendMessage(message);
+    await loadHistory();
     statusText.textContent = "متصل";
   } catch (error) {
     console.error(error);
-    addMessage(
-      `خطأ الاتصال: ${error.message}`,
-      "support"
-    );
+    addLocalMessage(`تعذر إرسال الرسالة: ${error.message}`, "support");
     statusText.textContent = "تعذر الاتصال";
   } finally {
     setLoading(false);
     input.focus();
   }
 });
+
+(async () => {
+  if (!macAddress) {
+    statusText.textContent = "عنوان MAC غير موجود";
+    input.disabled = true;
+    sendButton.disabled = true;
+    return;
+  }
+
+  await loadHistory();
+  setInterval(loadHistory, 4000);
+})();
