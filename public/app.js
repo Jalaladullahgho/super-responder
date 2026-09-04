@@ -19,6 +19,16 @@ function authHeaders(extra = {}) { return { apikey: SUPABASE_PUBLISHABLE_KEY, Au
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char])); }
 function formatTime(value) { if (!value) return ""; try { return new Date(value).toLocaleTimeString("ar-YE", {hour:"2-digit", minute:"2-digit"}); } catch { return ""; } }
 
+function trimClientMessages() {
+  while (messages.children.length > 20) {
+    const first = messages.firstElementChild;
+    if (!first) break;
+    const id = first.dataset.messageId;
+    if (id) renderedIds.delete(String(id));
+    first.remove();
+  }
+}
+
 function appendMessage(item, optimistic = false) {
   if (!optimistic && item.id != null && renderedIds.has(String(item.id))) return;
   const wrapper = document.createElement("div");
@@ -30,15 +40,15 @@ function appendMessage(item, optimistic = false) {
   bubble.className = "bubble";
   bubble.innerHTML = escapeHtml(item.message).replace(/\n/g, "<br>");
   if (item.created_at) { const time = document.createElement("div"); time.className = "message-time"; time.textContent = formatTime(item.created_at); bubble.appendChild(time); }
-  wrapper.appendChild(bubble); messages.appendChild(wrapper); messages.scrollTop = messages.scrollHeight;
+  wrapper.appendChild(bubble); messages.appendChild(wrapper); trimClientMessages(); messages.scrollTop = messages.scrollHeight;
 }
 function removeOptimistic(text) { [...messages.querySelectorAll('[data-optimistic="true"]')].forEach(el => { if (el.querySelector(".bubble")?.textContent?.startsWith(text)) el.remove(); }); }
-function renderMessages(data) { messages.innerHTML = ""; renderedIds = new Set(); data.forEach(item => appendMessage(item)); messages.scrollTop = messages.scrollHeight; }
+function renderMessages(data) { messages.innerHTML = ""; renderedIds = new Set(); data.slice(-20).forEach(item => appendMessage(item)); messages.scrollTop = messages.scrollHeight; }
 
 async function supabaseGet(path) { const response = await fetch(`${SUPABASE_URL}${path}`, {headers:authHeaders()}); const text = await response.text(); let data; try { data=JSON.parse(text); } catch { data=text; } if (!response.ok) throw new Error(typeof data === "string" ? data : data?.message || data?.error || `HTTP ${response.status}`); return data; }
 async function findConversation() {
   if (!macAddress) return null;
-  const clients = await supabaseGet(`/rest/v1/clients?select=id,mac_address&mac_address=eq.${encodeURIComponent(macAddress)}&limit=1`);
+  const clients = await supabaseGet(`/rest/v1/clients?select=id&mac_address=eq.${encodeURIComponent(macAddress)}&limit=1`);
   if (!clients.length) return null;
   const conversations = await supabaseGet(`/rest/v1/conversations?select=id,client_id,status,created_at,updated_at&client_id=eq.${clients[0].id}&order=updated_at.desc&limit=1`);
   if (!conversations.length) return null;
