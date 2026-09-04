@@ -13,6 +13,7 @@ let currentConversationId = null;
 let supabase = null;
 let channel = null;
 let renderedIds = new Set();
+let realtimeRetryTimer = null;
 
 function authHeaders(extra = {}) { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, "Content-Type": "application/json", ...extra }; }
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char])); }
@@ -35,22 +36,73 @@ function removeOptimistic(text) { [...messages.querySelectorAll('[data-optimisti
 function renderMessages(data) { messages.innerHTML = ""; renderedIds = new Set(); data.forEach(item => appendMessage(item)); messages.scrollTop = messages.scrollHeight; }
 
 async function supabaseGet(path) { const response = await fetch(`${SUPABASE_URL}${path}`, {headers:authHeaders()}); const text = await response.text(); let data; try { data=JSON.parse(text); } catch { data=text; } if (!response.ok) throw new Error(typeof data === "string" ? data : data?.message || data?.error || `HTTP ${response.status}`); return data; }
-async function findConversation() { if (!macAddress) return null; const clients=await supabaseGet(`/rest/v1/clients?select=id,mac_address&mac_address=eq.${encodeURIComponent(macAddress)}&limit=1`); if (!clients.length) return null; const conversations=await supabaseGet(`/rest/v1/conversations?select=id,client_id,status,created_at,updated_at&client_id=eq.${clients[0].id}&order=updated_at.desc&limit=1`); if (!conversations.length) return null; currentConversationId=conversations[0].id; return conversations[0]; }
-async function loadHistory() { if (!macAddress) return; try { const conversation=await findConversation(); if (!conversation) { statusText.textContent="متصل"; return; } const data=await supabaseGet(`/rest/v1/messages?select=id,conversation_id,sender,message,created_at&conversation_id=eq.${conversation.id}&order=created_at.asc`); renderMessages(data); statusText.textContent="متصل"; } catch(error) { console.error(error); statusText.textContent="تعذر تحميل المحادثة"; } }
+async function findConversation() {
+  if (!macAddress) return null;
+  const clients = await supabaseGet(`/rest/v1/clients?select=id,mac_address&mac_address=eq.${encodeURIComponent(macAddress)}&limit=1`);
+  if (!clients.length) return null;
+  const conversations = await supabaseGet(`/rest/v1/conversations?select=id,client_id,status,created_at,updated_at&client_id=eq.${clients[0].id}&order=updated_at.desc&limit=1`);
+  if (!conversations.length) return null;
+  currentConversationId = conversations[0].id;
+  return conversations[0];
+}
+async function loadHistory() {
+  if (!currentConversationId) return;
+  try {
+    const data = await supabaseGet(`/rest/v1/messages?select=id,conversation_id,sender,message,created_at&conversation_id=eq.${currentConversationId}&order=created_at.desc&limit=20`);
+    data.reverse();
+    renderMessages(data);
+    statusText.textContent = "متصل";
+  } catch(error) { console.error(error); statusText.textContent = "تعذر تحميل المحادثة"; }
+}
 
-async function sendMessage(message) { const response=await fetch(SUPABASE_FUNCTION_URL,{method:"POST",headers:authHeaders(),body:JSON.stringify({mac_address:macAddress,message,conversation_id:currentConversationId})}); const text=await response.text(); let data; try { data=JSON.parse(text); } catch { data={raw:text}; } if(!response.ok) throw new Error(data?.error||data?.message||data?.raw||`HTTP ${response.status}`); if(data?.conversation_id) currentConversationId=data.conversation_id; return data; }
+function scheduleRealtimeRetry() {
+  if (realtimeRetryTimer || !currentConversationId) return;
+  realtimeRetryTimer = setTimeout(() => {
+    realtimeRetryTimer = null;
+    subscribeToConversation();
+  }, 4000);
+}
 
-function initRealtime() {
-  if (!supabase || channel) return;
-  channel=supabase.channel("client-messages").on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"},payload=>{
-    const item=payload.new;
-    if(String(item.conversation_id)!==String(currentConversationId)) return;
-    [...messages.querySelectorAll('[data-optimistic="true"]')].forEach(el=>{ if(el.querySelector(".bubble")?.textContent?.startsWith(item.message)) el.remove(); });
-    appendMessage(item);
-    statusText.textContent="متصل";
-  }).subscribe(status=>{ if(status==="SUBSCRIBED") statusText.textContent="متصل"; });
+function subscribeToConversation() {
+  if (!supabase || !currentConversationId) return;
+  if (channel) { try { supabase.removeChannel(channel); } catch {} channel = null; }
+  const conversationId = String(currentConversationId);
+  channel = supabase.channel(`client-messages-${conversationId}`)
+    .on("postgres_changes", { event:"INSERT", schema:"public", table:"messages", filter:`conversation_id=eq.${conversationId}` }, payload => {
+      const item = payload.new;
+      [...messages.querySelectorAll('[data-optimistic="true"]')].forEach(el => { if (el.querySelector(".bubble")?.textContent?.startsWith(item.message)) el.remove(); });
+      appendMessage(item);
+      statusText.textContent = "متصل";
+    })
+    .subscribe(status => {
+      if (status === "SUBSCRIBED") statusText.textContent = "متصل";
+      else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        statusText.textContent = "إعادة الاتصال...";
+        scheduleRealtimeRetry();
+      }
+    });
+}
+
+async function sendMessage(message) {
+  const response = await fetch(SUPABASE_FUNCTION_URL,{method:"POST",headers:authHeaders(),body:JSON.stringify({mac_address:macAddress,message,conversation_id:currentConversationId})});
+  const text = await response.text(); let data; try { data=JSON.parse(text); } catch { data={raw:text}; }
+  if(!response.ok) throw new Error(data?.error||data?.message||data?.raw||`HTTP ${response.status}`);
+  const previousConversationId = currentConversationId;
+  if(data?.conversation_id) currentConversationId=data.conversation_id;
+  if (currentConversationId && String(currentConversationId) !== String(previousConversationId)) subscribeToConversation();
+  return data;
 }
 
 form.addEventListener("submit", async event=>{ event.preventDefault(); const message=input.value.trim(); if(!message||!macAddress)return; appendMessage({sender:"client",message},true); input.value=""; sendButton.disabled=true; input.disabled=true; statusText.textContent="جاري الإرسال..."; try { const data=await sendMessage(message); if(data?.user_message){ removeOptimistic(message); appendMessage(data.user_message); } if(data?.response) appendMessage(data.response); statusText.textContent="متصل"; } catch(error) { console.error(error); removeOptimistic(message); appendMessage({sender:"admin",message:`تعذر إرسال الرسالة: ${error.message}`}); statusText.textContent="تعذر الاتصال"; } finally { sendButton.disabled=false; input.disabled=false; input.focus(); } });
 
-(async()=>{ if(!macAddress){statusText.textContent="عنوان MAC غير موجود";input.disabled=true;sendButton.disabled=true;return;} try { const script=document.createElement("script"); script.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"; await new Promise((resolve,reject)=>{script.onload=resolve;script.onerror=reject;document.head.appendChild(script);}); supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY); await loadHistory(); initRealtime(); } catch(error){ console.error(error); statusText.textContent="تعذر الاتصال"; await loadHistory(); } })();
+(async()=>{
+  if(!macAddress){statusText.textContent="عنوان MAC غير موجود";input.disabled=true;sendButton.disabled=true;return;}
+  try {
+    if (!window.supabase?.createClient) throw new Error("تعذر تحميل مكتبة Supabase");
+    supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+    const conversation = await findConversation();
+    if (!conversation) { statusText.textContent="متصل"; return; }
+    subscribeToConversation();
+    await loadHistory();
+  } catch(error){ console.error(error); statusText.textContent="تعذر الاتصال"; }
+})();
