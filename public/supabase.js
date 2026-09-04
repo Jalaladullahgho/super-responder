@@ -40,8 +40,8 @@
       this.socket = new WebSocket(url);
 
       this.socket.onopen = () => {
-        this.joinRef = String(++this.ref);
-        const joinRef = this.joinRef;
+        const joinRef = String(++this.ref);
+        this.joinRef = joinRef;
         const payload = {
           config: {
             broadcast: { ack: false, self: false },
@@ -50,7 +50,13 @@
             private: false
           }
         };
-        this.push("phx_join", payload, joinRef);
+        this.socket.send(JSON.stringify({
+          topic: this.topic,
+          event: "phx_join",
+          payload,
+          ref: joinRef,
+          join_ref: joinRef
+        }));
         this.startHeartbeat();
       };
 
