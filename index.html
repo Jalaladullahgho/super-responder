@@ -1,0 +1,1930 @@
+﻿<!--
+wifag-status-page;
+id:aa6ad16af025938401f07d1ccccc411b;
+-->
+<!DOCTYPE html>
+<html lang="ar">
+  <head>
+    <meta charset="UTF-8" />
+    <title data-network-title="">شبكة{{network-title}}   نت اللاسلكية</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+    <meta name="theme-color" content="#7919ab" />
+    <link rel="shortcut icon" type="image/x-icon" href="img/logo.jpg" />
+    <link rel="stylesheet" href="css/fontello.min.css" />
+    <link rel="stylesheet" href="css/style.min.css" />
+    <link rel="stylesheet" href="css/color.min.css">
+    <link rel="stylesheet" href="css/colot.css">
+    <link rel="stylesheet" href="css/mood.css">
+    <link rel="stylesheet" href="css/wifi.css">
+    <link rel="stylesheet" href="css/wifi2.css">
+    <link rel="stylesheet" href="css/modern.css">
+    <meta http-equiv="Cache-Control" content="max-age=172800, public">
+    <meta http-equiv="Pragma" content="cache">
+    <meta http-equiv="Expires" content="Fri, 31 Jan 2050 12:00:00 GMT">
+    <script>
+    // تسجيل SW مع إجبار التحديث
+    if('serviceWorker' in navigator){
+        navigator.serviceWorker.register('sw.js').then(function(reg){
+            // تحقق من تحديثات كل 30 دقيقة
+            setInterval(function(){reg.update();},1800000);
+        }).catch(function(){});
+    }
+    </script>
+    <style>
+      /* إخفاء القوالب حتى يتم استبدالها من الكونفج */
+      [data-n-n], [data-network-name] { visibility: hidden; }
+      body.tpl-ready [data-n-n], body.tpl-ready [data-network-name] { visibility: visible; }
+    </style>
+    <script>
+    // === إظهار الصفحة بسلاسة ===
+    var _pageShown=false;
+    function showPage(){if(_pageShown)return;_pageShown=true;document.body.classList.add('page-ready');}
+
+    // === اعتراض Config لحفظ القيم في الكاش فوراً ===
+    var _origConfigFn=typeof Config==='function'?Config:null;
+    Config=function(a){
+        if(_origConfigFn)_origConfigFn(a); else if(typeof hotspotConfig!=='undefined')hotspotConfig=a;
+        try{
+            if(a['n-n'])localStorage.setItem('_net_nn',a['n-n']);
+            if(a['network-name'])localStorage.setItem('_net_nm',a['network-name']);
+        }catch(e){}
+    };
+
+    // === مراقبة: هل onConfigLoaded استبدل القوالب؟ ===
+    var _tplDone=false;
+    function checkTemplates(){
+        if(_tplDone)return true;
+        var nn=document.querySelector('[data-n-n]'),nm=document.querySelector('.text-main');
+        if(!nn&&!nm)return false;
+        var nnOK=!nn||nn.textContent.indexOf('{{')===-1;
+        var nmOK=!nm||nm.textContent.indexOf('{{')===-1;
+        if(nnOK&&nmOK){
+            _tplDone=true;
+            // حفظ القيم الحقيقية في الكاش لاستخدامها لاحقاً
+            try{
+                if(nn&&nn.textContent.trim())localStorage.setItem('_net_nn',nn.textContent.trim());
+                if(nm&&nm.textContent.trim())localStorage.setItem('_net_nm',nm.textContent.trim());
+            }catch(e){}
+            document.body.classList.add('tpl-ready');
+            return true;
+        }
+        return false;
+    }
+
+    // === بديل: إذا لم يتم تحميل الكونفج، استخدم الكاش أو القيم الافتراضية ===
+    function applyFallbackTemplates(){
+        if(_tplDone)return;
+        _tplDone=true;
+        var nn=document.querySelector('[data-n-n]'),nm=document.querySelector('.text-main');
+        var cNN=null,cNM=null;
+        try{cNN=localStorage.getItem('_net_nn');cNM=localStorage.getItem('_net_nm');}catch(e){}
+        if(nn&&nn.textContent.indexOf('{{')!==-1)nn.textContent=cNN||'شبكة';
+        if(nm&&nm.textContent.indexOf('{{')!==-1)nm.textContent=cNM||'الشبكة اللاسلكية';
+        document.body.classList.add('tpl-ready');
+    }
+
+    // مراقبة دورية كل 100ms - إذا اشتغل onConfigLoaded نكشفه ونحفظ القيم
+    var _tplInterval=setInterval(function(){
+        if(checkTemplates())clearInterval(_tplInterval);
+    },100);
+
+    // بعد 1.5 ثانية إذا الكونفج ما حمّل، نستخدم الكاش/البديل
+    setTimeout(function(){
+        clearInterval(_tplInterval);
+        if(!_tplDone)applyFallbackTemplates();
+    },1500);
+
+    // === موازنة إزاحة اسم الشبكة حسب طول النص ===
+    function adjustNetworkNameOffset(){
+        var textEl=document.querySelector('.text-main');
+        var nameEl=document.querySelector('.network-name');
+        if(!textEl||!nameEl)return;
+        var text=textEl.textContent||'';
+        if(!text.trim())return;
+        // قياس عرض النص الفعلي عبر عنصر مؤقت
+        var cs=getComputedStyle(textEl);
+        var m=document.createElement('span');
+        m.style.cssText='position:absolute;visibility:hidden;white-space:nowrap;font-size:'+cs.fontSize+';font-weight:'+cs.fontWeight+';font-family:'+cs.fontFamily+';letter-spacing:'+cs.letterSpacing+';';
+        m.textContent=text;
+        document.body.appendChild(m);
+        var realTextW=m.offsetWidth;
+        document.body.removeChild(m);
+        var containerW=nameEl.offsetWidth;
+        if(containerW<=0||realTextW<=0)return;
+        // القيمة الأساسية 49px مضبوطة على الاسم الحالي
+        // كلما صغر النص صغرت الإزاحة، وكلما طال زادت (مع حد أقصى)
+        var baseOffset=49;
+        var ratio=realTextW/containerW;
+        var offset;
+        if(ratio<=0.15){offset=Math.round(baseOffset*0.2);}
+        else if(ratio>=0.95){offset=baseOffset;}
+        else{offset=Math.round(baseOffset*(ratio/0.95));}
+        offset=Math.max(0,Math.min(baseOffset,offset));
+        nameEl.style.transform='translateX('+offset+'px)';
+    }
+
+    // مراقب: تشغيل الموازنة بعد ظهور القوالب
+    var _origCheckTpl=checkTemplates;
+    checkTemplates=function(){
+        var r=_origCheckTpl();
+        if(r)adjustNetworkNameOffset();
+        return r;
+    };
+    var _origApplyFb=applyFallbackTemplates;
+    applyFallbackTemplates=function(){
+        _origApplyFb();
+        adjustNetworkNameOffset();
+    };
+    // أيضاً عند تغيير حجم الشاشة
+    window.addEventListener('resize',function(){if(_tplDone)adjustNetworkNameOffset();});
+
+    // إظهار الصفحة
+    if(document.readyState!=='loading')showPage();
+    else document.addEventListener('DOMContentLoaded',showPage);
+    setTimeout(showPage,300);
+    </script>
+    <style>
+      /* ===== سلاسة التحميل ===== */
+      body { opacity: 0; }
+      body.page-ready { opacity: 1; transition: opacity 0.25s ease-out; }
+      
+      /* ===== أداء ===== */
+      .gpu-accelerated { -webkit-transform: translateZ(0); transform: translateZ(0); will-change: transform; }
+
+      /* ===== شريط التاريخ والوقت ===== */
+      #datetime-display {
+        text-align: center; padding: 8px 6px; font-family: 'Almarai', Arial, sans-serif;
+        font-size: 13px; font-weight: bold; direction: rtl;
+        background: linear-gradient(135deg, rgba(121,25,171,0.2) 0%, rgba(23,54,114,0.25) 100%);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap;
+      }
+      #datetime-display .dt-icon { font-size: 16px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
+      #datetime-display .dt-time {
+        color: #fff; background: linear-gradient(135deg, #7919ab, #5a1480); padding: 3px 12px;
+        border-radius: 20px; font-size: 14px; letter-spacing: 1px;
+        display: inline-flex; align-items: center; gap: 5px;
+        box-shadow: 0 2px 6px rgba(121,25,171,0.35);
+      }
+      #datetime-display .dt-date {
+        color: rgba(255,255,255,0.9); font-size: 12px;
+        display: inline-flex; align-items: center; gap: 5px;
+      }
+      #datetime-display .dt-separator { color: rgba(255,255,255,0.25); font-size: 16px; }
+
+      /* ===== أيقونات SVG ===== */
+      .ico { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-left: 4px; vertical-align: middle; flex-shrink: 0; }
+      .ico svg { width: 100%; height: 100%; }
+      .ico-sm { width: 16px; height: 16px; }
+      .ico-lg { width: 26px; height: 26px; }
+
+      /* ===== أزرار ===== */
+      .btn-icon { margin-left: 5px; font-size: 14px; vertical-align: middle; }
+      .buttonopsion { transition: transform 0.15s ease, box-shadow 0.15s ease; -webkit-tap-highlight-color: transparent; }
+      .buttonopsion:active { transform: scale(0.97) !important; }
+
+      /* ===== جدول الحالة - بطاقات مدمجة ===== */
+      #status table { border-spacing: 0 4px !important; border-collapse: separate !important; margin: 0 auto; width: 100%; }
+      #status table tr { background: none !important; }
+      #status table td {
+        background: linear-gradient(135deg, rgba(25,25,50,0.9), rgba(40,38,75,0.8)) !important;
+        backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+        padding: 10px 12px !important; color: #fff;
+        border: 1px solid rgba(255,255,255,0.05) !important;
+        box-shadow: none !important; font-size: 12px;
+      }
+      #status table td:first-child {
+        border-radius: 0 10px 10px 0 !important;
+        font-weight: 700; font-size: 12px !important;
+        display: flex; align-items: center; gap: 6px;
+        white-space: nowrap; color: rgba(255,255,255,0.7);
+      }
+      #status table td:last-child {
+        border-radius: 10px 0 0 10px !important;
+        text-align: center; font-size: 12px; color: #fff; font-weight: 700;
+      }
+      #status table .ico-sm { width: 16px; height: 16px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25)); }
+
+      /* ===== صفوف التفاصيل المخفية ===== */
+      .details-tbody { display: none; }
+      .details-tbody.show { display: table-row-group; }
+      .details-tbody td { opacity: 0.85; font-size: 11px !important; padding: 8px 10px !important; }
+      .toggle-details-btn {
+        display: flex; align-items: center; justify-content: center; gap: 5px;
+        width: 100%; padding: 8px; margin: 4px 0 8px;
+        background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.15);
+        border-radius: 10px; color: rgba(255,255,255,0.6); font-size: 11px; font-weight: 600;
+        cursor: pointer; transition: all 0.2s ease;
+        font-family: inherit;
+      }
+      .toggle-details-btn:active { background: rgba(255,255,255,0.1); }
+      .toggle-details-btn .arrow { transition: transform 0.3s ease; display: inline-block; font-size: 10px; }
+      .toggle-details-btn.open .arrow { transform: rotate(180deg); }
+
+      /* ===== أزرار صفحة الحالة ===== */
+      .status-btns {
+        display: flex; gap: 8px; justify-content: center; margin-bottom: 8px; flex-wrap: wrap;
+      }
+      .status-btns .buttonopsion {
+        flex: 1; min-width: 110px; max-width: 180px;
+        padding: 8px 10px !important; font-size: 12px !important;
+        /* border-radius: 12px !important; */
+        background: linear-gradient(135deg, rgba(25,25,50,0.95), rgba(40,38,75,0.85)) !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+      }
+
+      /* ===== شريط النجاح - مدمج ===== */
+      #status .title {
+        background: linear-gradient(135deg, rgba(34,197,69,0.12), rgba(121,25,171,0.1)) !important;
+        border: 1px solid rgba(34,197,69,0.2) !important;
+        border-right: 3px solid #22c55e !important;
+        color: #fff !important; font-size: 13px !important;
+        padding: 8px 12px !important; text-align: right !important;
+        display: flex; align-items: center; gap: 6px;
+        box-shadow: none !important; text-shadow: none !important;
+        margin-bottom: 4px !important;
+      }
+      #status .title.hidden { display: none !important; }
+      .status-link {
+        display: inline-block; color: rgba(255,255,255,0.5); font-size: 11px;
+        text-decoration: none; margin-bottom: 8px;
+      }
+      .status-link a { color: rgba(255,255,255,0.7); text-decoration: underline; }
+
+      /* ===== تسريع التمرير ===== */
+      .modal-content { -webkit-overflow-scrolling: touch; overflow-y: auto; }
+      
+      /* ===== تحسين select ===== */
+      select { -webkit-appearance: none; appearance: none; }
+
+      /* ===== أيقونة صغيرة داخل الخيارات ===== */
+      .opt-ico { display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-left: 3px; }
+      .opt-ico svg { width: 100%; height: 100%; }
+      
+      /* ===== تنبيهات محسنة ===== */
+      .alert-box {
+        padding: 10px 14px; border-radius: 8px; margin-top: 10px;
+        font-weight: bold; font-size: 13px; display: none;
+        border-right: 4px solid; animation: none;
+      }
+      .alert-warning { background: rgba(255,238,186,0.95); color: #856404; border-right-color: #ffc107; }
+      .alert-danger { background: rgba(255,204,204,0.95); color: #a94442; border-right-color: #dc3545; }
+      .alert-error { background: rgba(243,12,12,0.95); color: #fff; border-right-color: #ff0; }
+
+      /* ===== رقم الخدمة ===== */
+      .servicenumber { 
+        margin: 0; position: relative; top: 50px;
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+        color: #fff; font-size: 13px; opacity: 0.9;
+      }
+
+      /* ===== حالة الاتصال ===== */
+      .status-badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;
+      }
+      .status-badge.active { background: rgba(40,167,69,0.2); color: #28a745; }
+      .status-badge.inactive { background: rgba(220,53,69,0.2); color: #dc3545; }
+
+      /* ===== أزرار الخروج - جنب لجنب ===== */
+      .logout-btns {
+        display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+        margin: 12px 0 8px;
+      }
+      #status .login-submit {
+        border-radius: 12px !important;
+        background: linear-gradient(135deg, rgba(25,25,50,0.95), rgba(40,38,75,0.85)) !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        font-size: 13px !important; height: auto !important;
+        padding: 10px 16px !important;
+        display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        flex: 1; min-width: 130px;
+      }
+
+      /* ===== ويدجت استهلاك البيانات ===== */
+      .usage-widget { padding: 6px 0; margin: 8px 0; direction: rtl; }
+      .usage-card {
+        display: flex; align-items: center; gap: 12px;
+        background: linear-gradient(145deg, #0f0f2e 0%, #1a1845 50%, #1e1250 100%);
+        border-radius: 16px; padding: 14px 16px;
+        position: relative; overflow: hidden;
+        border: 1px solid rgba(121,25,171,0.15);
+        box-shadow: 0 4px 18px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04);
+      }
+      .usage-card::before {
+        content: ''; position: absolute; top: -50%; left: -25%; width: 140px; height: 140px;
+        background: radial-gradient(circle, rgba(121,25,171,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+      }
+      .usage-circle-wrap { position: relative; width: 64px; height: 64px; flex-shrink: 0; z-index: 1; }
+      .usage-circle-wrap svg { width: 64px; height: 64px; transform: rotate(-90deg); filter: drop-shadow(0 2px 5px rgba(255,140,50,0.2)); }
+      .usage-circle-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 5; }
+      .usage-circle-fg { fill: none; stroke: url(#usageGrad); stroke-width: 5.5; stroke-linecap: round; transition: stroke-dashoffset 0.8s cubic-bezier(.4,0,.2,1); }
+      .usage-pct {
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        color: #ff8c32; font-size: 14px; font-weight: 900;
+        text-shadow: 0 1px 3px rgba(255,140,50,0.25);
+      }
+      .usage-info { flex: 1; min-width: 0; z-index: 1; }
+      .usage-remain-label { color: rgba(255,255,255,0.5); font-size: 10px; font-weight: 700; margin-bottom: 3px; }
+      .usage-remain-val { color: #fff; font-size: 18px; font-weight: 900; margin-bottom: 10px; line-height: 1.1; word-break: break-word; }
+      .usage-transfer {
+        display: flex; gap: 6px; flex-wrap: wrap;
+      }
+      .usage-tf-item {
+        flex: 1 1 45%; min-width: 0; display: flex; align-items: center; gap: 5px;
+        background: rgba(255,255,255,0.04); border-radius: 8px; padding: 5px 7px;
+        border: 1px solid rgba(255,255,255,0.05);
+      }
+      .usage-tf-ico { width: 14px; height: 14px; flex-shrink: 0; }
+      .usage-tf-txt { min-width: 0; flex: 1; }
+      .usage-tf-label { color: rgba(255,255,255,0.4); font-size: 9px; font-weight: 700; }
+      .usage-tf-val { font-size: 11px; font-weight: 900; direction: ltr; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .usage-tf-val.dl-val { color: #4ade80; }
+      .usage-tf-val.ul-val { color: #fbbf24; }
+    </style>
+  </head>
+
+
+  <body translate="no" class="bd bd_color">
+    <div id="datetime-display">
+      <span class="dt-time"><span class="dt-icon"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span></span> <span id="current-time"></span></span>
+      <span class="dt-separator">◆</span>
+      <span class="dt-date"><span class="dt-icon"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span></span> <span id="current-date"></span></span>
+    </div>
+    
+    <div id="imges22" style="height: 43px;" class="hidden">
+      <img id="imges2" style="height: 80px; width: 147px; filter: invert(1);" src="" loading="lazy" alt="">
+    </div>
+
+    <div class="container-top">
+      <div id="slider-container-top" style="display:none">
+        <button id="prev-button-top" class="slider-arrow left-arrow">❮</button>
+        <button id="next-button-top" class="slider-arrow right-arrow">❯</button>
+        <div id="image-indicator-top" class="slider-indicator-top"></div>
+      </div>
+    </div>
+
+    <div id="adsvewu" class="modal">
+      <div class="modal-content wrapper_bg">
+        <div id="slider-container">
+          <button id="prev-buttonvewu" class="slider-arrow left-arrow">❮</button>
+          <button id="next-buttonvewu" class="slider-arrow right-arrow">❯</button>
+        </div>
+        <div id="image-indicator-vewu" class="slider-indicator"></div>
+      </div>
+    </div>
+
+
+
+    <div id="optionsModal" class="modal">
+      <div class="modal-content wrapper_bg model-faly">
+        <div id="close">
+          <span class="close">&times;</span>
+        </div>
+        <h2><span id="network-id-display"></span></h2>
+        <h2><span id="network-name-display"></span></h2>
+
+        <div class="checkboxes">
+          
+          <div id="face-settings">
+            <div id="faceNotification" class="alert-box alert-danger">
+              <span class="opt-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> تنبيه: الكرت لن يعمل إلا على الفيس بوك والواتس آب فقط.
+            </div>
+            <select id="face" name="face" class="sc_bg_shape8" onchange="updateSpeedValue()">
+              <option value="all" selected="selected" disabled="disabled" hidden="">📱 كرت واتساب و فيس بوك</option>
+              <option value="all">🌐 كرت عادي ─ عدم التحديد</option>
+              <option value="offalnooahapp">📱 جعل الكرت يعمل فقط للفيس والوتس</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="user-count-settings">
+          <select id="user-count" name="user-count" class="sc_bg_shape8" onchange="updateSpeedValue()">
+            <option value="no" selected="selected" disabled="disabled" hidden="">👥 حدد عدد مستخدمين الكرت</option>
+            <option value="no">❌ الافتراضي ─ عدم التحديد</option>
+            <option value="1">👤 1 ─ مستخدم واحد</option>
+            <option value="2">👥 2 ─ مستخدمان</option>
+            <option value="3">👥 3 ─ ثلاثة مستخدمين</option>
+            <option value="4">👥 4 ─ أربعة مستخدمين</option>
+            <option value="5">👥 5 ─ خمسة مستخدمين</option>
+          </select>
+        </div>
+
+        <div id="bind-settings">
+          <div id="bindNotification" class="alert-box alert-warning">
+            <span class="opt-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> تنبيه: هذا الكرت لن يعمل إلا على هذا الهاتف فقط. وإذا كان الماك عشوائي، لن يعمل إلا على جهاز البث هذا فقط.
+          </div>
+          <select id="bind" name="bind" class="sc_bg_shape8" onchange="updateSpeedValue()">
+            <option value="no" selected="selected" disabled="disabled" hidden="">🔗 تخصيص الكرت لهذا الجهاز</option>
+            <option value="no">❌ عدم التحديد</option>
+            <option value="bind">🔒 ربط الكرت بهذا الهاتف فقط</option>
+            <option value="nobind">🔓 إلغاء ربط الكرت بهذا الهاتف</option>
+          </select>
+        </div>
+
+        <div id="vpn-settings">
+          <select id="vpn-select" name="vpn-select" class="sc_bg_shape8" onchange="updateSpeedValue()">
+            <option value="vpn">🛡️ تفعيل VPN للألعاب والاتصالات</option>
+            <option value="novpn">❌ إيقاف VPN كلياً</option>
+          </select>
+        </div>
+
+        <div id="forcespeed" class="alert-box alert-error">
+          <span class="opt-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#ff0" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> تحديد السرعة إجباري لتسجيل الدخول يجب تحديد السرعة
+        </div>
+
+        <select class="sc_bg_shape8" id="speed2" name="domain_clone" style="display: none;"></select>
+
+        <button id="reconnect-btn" class="btn btn_color buttonopsion hidden"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span> حفظ الخيارات</button>
+
+        <div id="block-card-guessing-settings" class="hidden"></div>
+      </div>
+    </div>
+
+    <div id="full-screen-alert" data-service-number="" style="display:none">
+      <div style="margin: 8% 0;"><span class="ico" style="width:70px;height:70px"><svg viewBox="0 0 24 24" fill="none" stroke="#dc3545" stroke-width="2" stroke-linecap="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span></div>
+      <p style="font-size: 20px; line-height: 1.8; padding: 0 15px;">
+        عزيزنا العميل لا يمكنك تسجيل الدخول، أنت متصل من جهاز مبرمج بطريقة غير صحيحة.<br>
+        يرجى التواصل على الرقم <strong>{{service-number}}</strong> وإحضار الجهاز إلينا لإعادة برمجته.
+      </p>
+      <div id="countdown" style="font-size: 40px;"></div>
+    </div>
+
+    <div class="background"></div>
+    <div class="container">
+      <div style="margin-bottom: -35px;">
+        <div class="error-container">
+          <div class="error">
+            <div class="fade-in">
+              <p id="error"></p>
+            </div>
+            <button class="button app-submit">إغلاق</button>
+          </div>
+        </div>
+
+		
+		
+        <div id="chose-speed" class="speed-container">
+          <div class="wrapper wrapper_bg">
+            <p class="title title_bg">يرجى اختيار سرعة كرتك!!</p>
+            <div style="padding: 25px;">
+         
+			  </div>
+            </div>
+          </div>
+        </div>
+        <div class="screen sc">
+          <div id="wifi-loaders">
+            <svg class="circle-outer" viewBox="0 0 86 86">
+                <circle class="back" cx="43" cy="43" r="40"></circle>
+                <circle class="front" cx="43" cy="43" r="40"></circle>
+                <circle class="new" cx="43" cy="43" r="40"></circle>
+            </svg>
+            <svg class="circle-middle" viewBox="0 0 60 60">
+                <circle class="back" cx="30" cy="30" r="27"></circle>
+                <circle class="front" cx="30" cy="30" r="27"></circle>
+            </svg>
+            <svg class="circle-inner" viewBox="0 0 34 34">
+                <circle class="back" cx="17" cy="17" r="14"></circle>
+                <circle class="front" cx="17" cy="17" r="14"></circle>
+            </svg>
+                <div class="text" id="wifiText" data-text="" ></div>
+        </div>
+        
+               <!-- <div id="wifi-loader">
+                <div class="signal"></div>
+                <div class="signal"></div>
+                <div class="signal"></div>
+                <div class="signal"></div>
+              </div> -->
+              <div class="loader">
+                <span class="loader-text" id="netwrkname" data-net-name-en>{{net-name-en}} </span>
+            </div>
+          <div class="screen-content">
+            
+            <div class="login" id="login">
+              
+              <div class="imges">
+                <img id="delayed-image" src="" loading="lazy" alt="" >
+
+              </div>
+            <div id="imges44" class="hidden"> 
+              <img id="imges4" src=""  class="imges4 " loading="lazy" alt="">
+            </div>
+              <div class="logo screen-background-shape"></div>
+            
+         
+
+
+            
+
+
+			<form class="login-form" name="login">
+              
+                <div id="scrolling-text">
+                    <div id="scroll-text-content"></div>
+                </div>
+
+                <div class="login-field">
+                  
+                  <div id="imges33" class="imges3 hidden">
+                    <!--img src="img/18.png" alt=""-->
+               
+                    <img id="imges5" src=""  class="imges5" loading="lazy" alt="">
+                    <img id="imges6" src=""  class="imges6 hidden" loading="lazy" alt="">
+
+                  </div>
+				  
+				         <input 
+        name="username" 
+        id="username" 
+        class="login-input" 
+        placeholder="ادخل الكرت هنا" 
+        autocomplete="on" 
+        value="$(username)" 
+
+        username-field="" 
+        improve-input 
+        rm-white-spaces 
+        to-arabic-numbers
+        style="direction:ltr"
+    />
+      
+
+           
+<div class="recent-cards-wrapper">
+  <div class="recent-cards-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8h20"/><path d="M9 12h6"/></svg>
+  </div>
+  <select id="recent-cards-list"></select>
+</div>
+                </div>
+                <div class="login-field password-field">
+
+
+                  
+                  <input type="hidden" name="password"  class="login-input " placeholder="ادخل كلمة السر هنا" improve-input="" password-field="" />
+				  
+                </div>
+				
+                <button class="button login-submit btn btn_color" parent-id="status" enable-hot-cookie="">
+                    <div class="button-text"></div><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2.5" stroke-linecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg></span> تسجيل الدخول
+                </button>
+
+				<br><br>
+
+        <div id="upcl-settings" class="upcl-main">
+  <label class="upcl-toggle">
+
+    <input
+      type="checkbox"
+      id="upcl"
+      name="upcl"
+      value="offalnooah"
+      checked
+      onchange="updateSpeedValue()"
+    >
+
+    <span class="upcl-switch"></span>
+
+    <span>إيقاف التحديثات</span>
+
+  </label>
+</div>
+
+<button
+  type="button"
+  class="button btn buttonopsion btn_color"
+  id="supportButton"
+  onclick="openSupport()"
+>
+  <span class="ico ico-sm">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 11.5a8.5 8.5 0 0 1-9 8.5 9.8 9.8 0 0 1-4-.8L3 21l1.8-4A8.3 8.3 0 0 1 3 11.5 8.5 8.5 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5z"/>
+      <path d="M8 12h.01M12 12h.01M16 12h.01"/>
+    </svg>
+  </span>
+  الدعم الفني
+</button>
+
+
+
+                    <div style="margin: auto; max-width: 300px;">
+                      <button type="button" class="button btn buttonopsion btn_color" id="showQrReaderButton"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></span> QR Code</button>
+                      <button type="button" class="button btn buttonopsion btn_color" id="showOptionsButton"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span> الخيارات</button>
+                      <button id="quran" class="button btn buttonopsion btn_color" onclick="window.location='https://quran.tv';"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></span> القرآن مجاناً</button>
+                    </div>
+                    
+                    
+                    <select class="sc_bg_shape8" id="speed" name="domain" speed-field="">
+		                 <!-- السرعات سيتم تحميلها من speeds.js -->
+					</select>											
+                                                    
+										    <!--select class="sc_bg_shape8" id="speed" name="domain" speed-field="">
+																	                        <option value="256K/1024K|noalnooah|all|vpn|no|no" id="peed1M">سرعة عادية </option>
+
+						                        <option value="512K/2048K|noalnooah|all|vpn|no|no" id="peed2M">سرعة متوسطة </option>
+
+
+						   <option value="1024K/4096K|noalnooah|all|vpn|no|no"  id="peed4M">سرعة عالية </option>
+                     
+						
+						   <option value="2048K/8192K|noalnooah|all|vpn|no|no" id="peed8M">سرعة عالية  جدا</option>
+                          <option value="128K/512K|noalnooah|all|vpn|no|no"  id="peed512K">سرعة منخفضة </option>
+                         
+                       
+                          <option value="4M/16M|noalnooah|all|vpn|no|no" class="hidden" id="peed16M">سرعة فائقة</option>
+                        <option value="">كرت هوت سبوت</option>	
+                        اسعار الكروت  		                    
+                       </select-->					
+					
+     <button type="button" class="button btn buttonopsion btn_color index type" id="showCardPricesButton" data-price-button=""><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span> الأسعار</button>
+     <button type="button" class="button btn buttonopsion btn_color index" data-sell-point-button="" id="showSellPointsButton"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></span> نقاط البيع</button>
+
+     <h5 class="servicenumber" data-service-number=""><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg></span> خدمة العملاء: {{service-number}}</h5>
+
+
+				
+				  </form>
+				
+                
+             
+            
+         
+
+
+
+  
+
+
+
+<style>
+    #reader__scan_region video { width: 600px!important; height: 500px; }
+    #reader #qr-shaded-region { border-width: 100px 20px!important; }
+    #QrReaderModal .modal-content { padding: 0; overflow: hidden; }
+    #fileInput, #galleryInput { display: none; }
+    .button-container { display: flex; justify-content: center; gap: 15px; margin-top: 15px; flex-wrap: wrap; }
+    .file-label {
+      display: flex; align-items: center; justify-content: center;
+      width: 90px; height: 90px; border-radius: 50%;
+      background: linear-gradient(135deg, #7919ab, #173672);
+      color: white; font-size: 13px; font-weight: bold; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(121,25,171,0.4); text-align: center; padding: 10px;
+      transition: transform 0.15s ease; -webkit-tap-highlight-color: transparent;
+    }
+    .file-label:active { transform: scale(0.93); }
+    #preview { display: none; width: 280px; max-height: 280px; margin: 15px auto; border-radius: 10px; object-fit: contain; }
+    #result { font-size: 14px; font-weight: bold; color: #ffffff; display: block; margin-top: 10px; }
+</style>        
+<div id="QrReaderModal" class="modal">
+    <div class="modal-content wrapper_bg" style="max-width: 400px;">
+      <span class="close">&times;</span>
+      <div id="qr-container">
+        <h3 style="margin-top: 33px; margin-bottom: 15px; color: #ffffff;"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2.5" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span> تسجيل الدخول السريع</h3>
+        <h3 style="margin-bottom: 15px; color: #ffffff; font-size: 15px;"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></span> قم بمسح الـ QR Code بالكاميرا</h3>
+        <div id="iframeContainer"></div>
+        <div class="button-container">
+            <label id="cameraStart" class="file-label" onclick="startCamera()"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></span> تشغيل الكاميرا</label>
+            <label id="cameraStop" class="file-label" onclick="stopCamera()" style="display: none;"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#dc3545" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></span> إيقاف الكاميرا</label>
+            <label for="fileInput" class="file-label"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></span> تشغيل الكاميرا 2</label>
+            <input type="file" id="fileInput" accept="image/*" capture="environment">
+            <label for="galleryInput" class="file-label"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span> رفع صورة</label>
+            <input type="file" id="galleryInput" accept="image/*">
+        </div>
+        <p style="margin-top: 10px; margin-bottom: 10px; color: #ffffff;"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></span> اضغط رابط الكود
+            <a id="result" style="direction: ltr;" href="#"></a>
+            <span id="failresult"></span>
+        </p>		
+          
+        <!-- Image Preview -->
+        <img id="preview" src="" alt="Preview" style="margin-left: auto; margin-right: auto;">
+        
+        <!--<video id="qr-video" disablepictureinpicture="" playsinline="" style="transform: scaleX(-1);"></video>-->
+<!--          <a href="camera://">Open Camera</a>
+          <div id="reader" style="width: 100%; "></div>-->
+          <!--<div id="reader" style="width: 400px; "></div>-->
+  <!--        <div id="reader" style="width: 400px;
+      height: 400px;"></div>-->
+          <!--<div id="qr-reader"></div>-->
+          
+          <br>
+      </div>	
+    </div>
+</div>
+    <script>
+        function startCamera() {
+            window.location.href = sph + '/qr_api/qr_fast_login.html';
+        }
+    </script>
+
+<div id="cardPricesModal" class="modal">
+  <div class="modal-content wrapper_bg">
+      <span class="close">&times;</span><br>
+      <div class="price-div">
+        <div class="wrapper">
+          <div class="shadow">
+            <p class="title col_2"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span> الأسعار</p>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> الفئة</th>
+                  <th scope="col"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> الوقت</th>
+                  <th scope="col"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span> الرصيد</th>
+                  <th scope="col"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> الصلاحية</th>
+                </tr>
+              </thead>
+              <tbody id="profiles"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+  </div>
+</div>
+
+<div id="sellPointsModal" class="modal">
+  <div class="modal-content wrapper_bg">
+      <span class="close">&times;</span>
+      <div class="sell-point-div">
+        <div class="wrapper">
+          <p class="title col_2"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></span> نقاط البيع</p>
+          <table>
+            <tbody class="sell-point" id="sell-points"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="social-login"></div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<br><br>
+
+<div id="image-slider2" class="carousel_wrapper" style="display:none">
+    <div class="carousel"></div>
+</div>
+
+<div id="image-slider" class="slider-container" style="display:none">
+    <button id="prev-button" class="slider-arrow left-arrow">❮</button>
+    <button id="next-button" class="slider-arrow right-arrow">❯</button>
+    <div id="image-indicator" class="slider-indicator"></div>
+</div>
+
+            <div class="social-login" style="display:none"></div>
+
+            </div>
+
+            <div class="app" id="price">
+              <div class="price-div">
+                <div class="wrapper wrapper_bg">
+                  <p class="title col_2"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span> الأسعار</p>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> الفئة</th>
+                        <th scope="col"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> الوقت</th>
+                        <th scope="col"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span> الرصيد</th>
+                        <th scope="col"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> الصلاحية</th>
+                      </tr>
+                    </thead>
+                    <tbody id="profiles"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="social-login">
+                <button class="app-logout button app-submit back btn"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></span> تسجيـل الدخـول</button>
+              </div>
+            </div>
+
+            <div class="app" id="sell-point">
+              <div class="sell-point-div">
+                <div class="wrapper">
+                  <table>
+                    <tbody class="sell-point" id="sell-points"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="social-login">
+                <button class="app-logout button app-submit back btn"> تسجيـل الدخـول</button>
+              </div>
+            </div>
+            
+            <div class="app" id="status">
+                
+              <div class="status-div">
+                <div class="wrapper wrapper_bg">
+				 <!--button type="button" class="app-submit extra-submit btn" data-esterahah="http://10.10.10.10/">الاستراحة</button>
+				                   <br />
+                  <br /-->
+
+                <!--button type="button" class="button app-submit extra-submit btn" data-mobasher="http://20.20.20.20">2 البث المباشر</button-->
+
+
+<div class="sc-bg-shape6" style="padding: 11px;">
+
+                  <button id="direct-break-button" class="buttonopsion btn btn_color" style="display:none;"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2.5" stroke-linecap="round"><path d="M17 8h1a4 4 0 110 8h-1"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg></span> استراحة</button>
+                  <button id="direct-live-button" class="buttonopsion btn btn_color" style="display:none;"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#ff4757" stroke-width="2.5" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span> البث المباشر</button>
+
+                  <div class="status-btns">
+                    <button id="controle" class="button btn buttonopsion btn_color control" onclick="window.location='http://hotspot.alnooah.pro';"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="10" y1="4" x2="10" y2="20"/></svg></span> لوحة التحكم</button>
+                    <button id="edit" class="btn btn_color buttonopsion"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span> تعديل الخيارات</button>
+                  </div>
+                  <p id="status-message" style="color: #28a745; font-weight: bold;" class="title title_bg hidden"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> تم تعديل الخيارات</p>
+
+                  <p class="title title_bg" id="status-title"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> تم تسجيل دخولك بنجاح!</p>
+                  <span class="status-link">لم يتم الاتصال؟ <a href="status.html">اضغط هنا</a></span>
+</div>
+
+				<table>
+                  <tbody>
+                    <tr id="speed-stu" class="hidden">
+                      <td><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2.5" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span> السرعة</td>
+                      <td id="sspeed"></td>
+                    </tr>
+                    <tr id="speed-sth" class="hidden">
+                      <td><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2.5" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span> السرعة</td>
+                      <td id="speed-status"></td>
+                    </tr>
+                    <tr>
+                      <td><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span> المستخدم</td>
+                      <td id="uusername" style="direction:ltr"></td>
+                    </tr>
+                  </tbody>
+                  <tbody class="details-tbody" id="details-tbody">
+                    <tr id="vpn-status-row">
+                      <td><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> VPN</td>
+                      <td id="vpn-status"></td>
+                    </tr>
+                    <tr>
+                      <td><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></span> الآيبي</td>
+                      <td>$(ip)</td>
+                    </tr>
+                    <tr id="upcl-status-row">
+                      <td><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></span> التحديثات</td>
+                      <td id="upcl-status"></td>
+                    </tr>
+                    <tr id="face-status-row">
+                      <td><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span> وضع التطبيقات</td>
+                      <td id="face-status"></td>
+                    </tr>
+                    <tr id="user-count-status-row">
+                      <td><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span> المستخدمين</td>
+                      <td id="user-count-status"></td>
+                    </tr>
+                    <tr id="bind-status-row">
+                      <td><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></span> ربط الكرت</td>
+                      <td id="bind-status"></td>
+                    </tr>
+                  </tbody>
+                  <tbody>
+                    <tr style="display:none">
+                      <td>التنزيل</td>
+                      <td id="bytes_out"></td>
+                    </tr>
+                    <tr style="display:none">
+                      <td>الرفع</td>
+                      <td id="bytes_in"></td>
+                    </tr>
+                    <tr>
+                      <td><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> المستهلك</td>
+                      <td id="uptime"></td>
+                    </tr>
+                    <tr session_time_left="">
+                      <td><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/><path d="M2 12A10 10 0 0112 2" stroke-dasharray="4 3"/></svg></span> المتبقي</td>
+                      <td id="session_time_left"></td>
+                    </tr>
+                  </tbody>
+               </table>
+           <button type="button" class="toggle-details-btn" id="toggle-details" onclick="var tb=document.getElementById('details-tbody');var open=tb.classList.toggle('show');this.classList.toggle('open',open);this.querySelector('.txt').textContent=open?'إخفاء التفاصيل':'عرض التفاصيل';">
+             <span class="txt">عرض التفاصيل</span> <span class="arrow">▼</span>
+           </button>
+
+           <!-- ===== ويدجت استهلاك البيانات ===== -->
+           <div class="usage-widget" id="usage-widget">
+             <svg width="0" height="0" style="position:absolute"><defs>
+               <linearGradient id="usageGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#ff6a00"/><stop offset="100%" stop-color="#ffb347"/></linearGradient>
+             </defs></svg>
+             <div class="usage-card" remain_bytes_total="">
+               <div class="usage-circle-wrap">
+                 <svg viewBox="0 0 36 36">
+                   <circle class="usage-circle-bg" cx="18" cy="18" r="15.9"/>
+                   <circle class="usage-circle-fg" id="usage-progress" cx="18" cy="18" r="15.9" stroke-dasharray="100 100" stroke-dashoffset="100"/>
+                 </svg>
+                 <div class="usage-pct" id="usage-pct">—</div>
+               </div>
+               <div class="usage-info">
+                 <div class="usage-remain-label">التحميل المتبقي</div>
+                 <div class="usage-remain-val" id="remain_bytes_total">مفتوح</div>
+                 <div class="usage-transfer">
+                   <div class="usage-tf-item">
+                     <svg class="usage-tf-ico" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>
+                     <div class="usage-tf-txt">
+                       <div class="usage-tf-label">تنزيل</div>
+                       <div class="usage-tf-val dl-val" id="usage-dl">0 B</div>
+                     </div>
+                   </div>
+                   <div class="usage-tf-item">
+                     <svg class="usage-tf-ico" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round"><polyline points="17 14 12 9 7 14"/><line x1="12" y1="9" x2="12" y2="21"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>
+                     <div class="usage-tf-txt">
+                       <div class="usage-tf-label">رفع</div>
+                       <div class="usage-tf-val ul-val" id="usage-ul">0 B</div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             </div>
+           </div>
+
+                  <div class="logout-btns">
+                    <button class="login-submit app-logout btn btn_color" erase-cookie="" clear-hot-cookie=""><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2.5" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> الخروج</button>
+                    <button class="login-submit app-logout btn btn_color"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#dc3545" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></span> قطع الاتصال</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="app" id="block">
+              <div class="status-div">
+                <div class="wrapper wrapper_bg">
+                  <p class="title title_bg"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#ff4757" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></span> أنت محظور</p>
+                  <div style="padding: 25px">
+                    <p class="contact-text"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#dc3545" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></span> لقد تم حظرك بسبب محاولات تسجيل الدخول الكثيرة الخاطئة</p>
+                    <div class="app-user">
+                      <span><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/><path d="M2 12A10 10 0 0112 2" stroke-dasharray="4 3"/></svg></span> بقي على فك الحظر:</span>
+                      <span count-down-span="" style="display: block; margin-top: 10px; font-size: 20px; color: #ff0000; font-weight: bold;"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="social-login">
+                <h5 class="contact back" data-service-number=""><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg></span> خدمة العملاء: {{service-number}}</h5>
+              </div>
+            </div>
+            <div class="app" id="app-store">
+              <div class="sell-point-div">
+                <div class="wrapper wrapper_bg" id="grid"></div>
+              </div>
+              <div class="social-login">
+                <button class="app-logout button app-submit back btn"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></span> الصفحة السابقة</button>
+                <h5 class="contact back" data-service-number=""><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg></span> خدمة العملاء: {{service-number}}</h5>
+              </div>
+            </div>
+            <div class="app" id="loan">
+              <div class="social-login">
+                <button class="app-logout button app-submit back btn"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></span> الصفحة السابقة</button>
+                <h5 class="contact back" data-service-number=""><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg></span> خدمة العملاء: {{service-number}}</h5>
+              </div>
+            </div>
+          </div>
+          <div class="screen-background title_bg">
+            <div class="screen-background-shape screen-background-shape6"></div>
+
+            <div class="screen-background-shape screen-background-shape4 sc-bg-shape1" style="display:none"></div>
+            <div class="screen-background-shape screen-background-shape1"></div>
+            <div class="screen-background-shape screen-background-shape7 sc-bg-shape4"></div>
+            <div class="screen-background-shape screen-background-shape8 sc-bg-shape8">
+                <div class="scrolling-container">
+                    <div class="scrolling-text" id="scrolling-text">
+                      <div id="scroll-text-content"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="screen-background-shape screen-background-shape9 sc-bg-shape6 sc_bg_shape8" id="sc_bg_shape8">
+                <div class="network-prefix" data-n-n>{{n-n}}</div>
+                <div class="network-name">
+                    <span data-network-name class="text1">
+                      <span class="text-main">{{network-name}}</span>
+                    </span>
+                </div>
+            </div>
+          </div>
+        </div>
+        <br />
+      </div>
+    </div>
+
+<script>
+
+  document.addEventListener('DOMContentLoaded', function () {
+      // الانتظار حتى يتم تحميل السرعات
+      function waitForSpeedElement(callback) {
+          if (window.speedsLoaded) {
+              callback();
+          } else {
+              window.addEventListener('speedsConfigLoaded', callback, { once: true });
+          }
+      }
+      
+      waitForSpeedElement(function() {
+          var speedrest = document.getElementById('speed');
+          if (!speedrest) {
+              console.error('Speed element not found');
+              return;
+          }
+          
+          var upcl = document.getElementById('upcl');
+          var bind = document.getElementById('bind');
+          var vpn = document.getElementById('vpn');
+          var userCount = document.getElementById('userCount');
+      function getCookieValue(name) {
+          var value = "; " + document.cookie;
+          var parts = value.split("; " + name + "=");
+          if (parts.length === 2) return parts.pop().split(";").shift();
+          return null;
+      }
+  
+      function setCookie(name, value, days) {
+          var expires = "";
+          if (days) {
+              var date = new Date();
+              date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+              expires = "; expires=" + date.toUTCString();
+          }
+          document.cookie = name + "=" + (value || "") + expires + "; path=/";
+      }
+  
+      function updateSpeedValueCookie() {
+          var selectedOp = speedrest.options[speedrest.selectedIndex];
+  
+          if (selectedOp) {
+              var value = selectedOp.value;
+  
+              setCookie('speed', value, 7);
+              console.log("Updated 'speed' in cookies:", value);
+
+
+          }
+  
+  
+          if (upcl.checked) setCookie('upcl', upcl.value, 7);
+  //        if (face.checked) setCookie('face', face.value, 7);
+  //setCookie('userCount', value, 7);
+  //setCookie('face', value, 7);
+  setCookie('vpn', value, 7);
+       ///       setCookie('bind', value, 7);
+
+        
+      }
+
+  
+      function loadValuesFromCookies() {
+          var savedValue = getCookieValue('speed'); 
+  
+          if (savedValue) {
+              var speedParts = savedValue.split('|'); 
+              var options = speedrest.options; 
+  
+              for (var i = 0; i < options.length; i++) {
+                  var optionParts = options[i].value.split('|'); 
+                  if (optionParts[0] === speedParts[0]) { 
+                      options[i].setAttribute('selected', 'selected'); 
+                      break;
+                  }
+              }
+          }
+          
+          // استرجاع السرعة المحفوظة عندما dm = 0
+          if (dm === 0) {
+              var savedSpeed = getCookieValue('selectedSpeed');
+              if (savedSpeed && speedrest) {
+                  for (var i = 0; i < speedrest.options.length; i++) {
+                      if (speedrest.options[i].value === savedSpeed) {
+                          speedrest.selectedIndex = i;
+                          break;
+                      }
+                  }
+              }
+          }
+  
+         // console.log("Loaded 'speed-value' from cookies:", savedValue);
+      }
+  
+      loadValuesFromCookies();
+  
+      // حفظ السرعة عند تغييرها عندما dm = 0
+      if (dm === 0) {
+          speedrest.addEventListener('change', function() {
+              var selectedSpeed = this.value;
+              var date = new Date();
+              date.setTime(date.getTime() + (7 * 24 * 60 * 60 * 1000));
+              var expires = date.toUTCString();
+              document.cookie = "selectedSpeed=" + encodeURIComponent(selectedSpeed) + ";expires=" + expires + ";path=/";
+          });
+      }
+  
+      document.querySelector('.login-submit').addEventListener('click', updateSpeedValueCookie)
+      {
+
+
+      };
+      }); // نهاية waitForSpeedElement
+  });
+  </script>
+
+  <script>
+    function getCookieValue(name) {
+      var value = "; " + document.cookie;
+      var parts = value.split("; " + name + "=");
+      if (parts.length === 2) return parts.pop().split(";").shift();
+      return null; 
+  }
+  
+  
+  function loadOtherValuesFromCookies() {
+      var checkboxes = document.querySelectorAll('#upcl');
+  
+      var vpnSelectElement = document.getElementById('vpn-select');
+      var userCountElement = document.getElementById('user-count');
+      var userCountElement = document.getElementById('face');
+      var bindCountElement = document.getElementById('bind');
+  
+  
+  
+  
+  checkboxes.forEach(function (checkbox) {
+    var savedValuech = getCookieValue(checkbox.id);
+
+    if (checkbox.id === 'upcl') {
+        // عدم وجود Cookie = ON افتراضيًا
+        if (savedValuech === null) {
+            checkbox.checked = true;
+        } else {
+            checkbox.checked = (savedValuech === checkbox.value);
+        }
+    } else {
+        if (savedValuech !== null && savedValuech === checkbox.value) {
+            checkbox.checked = true;
+        } else {
+            checkbox.checked = false;
+        }
+    }
+});
+  
+  
+  
+  
+  
+      vpnSelectElement.value = getCookieValue('vpn') || vpnSelectElement.options[0].value;
+      //userCountElement.value = getCookieValue('userCount') || userCountElement.options[0].value;
+    //  bindCountElement.value = getCookieValue('bind') || bindCountElement.options[0].value;
+    //  bindCountElement.value = getCookieValue('face') || bindCountElement.options[0].value;
+  
+    
+  }
+  
+  
+  document.addEventListener('DOMContentLoaded', function() {
+      loadOtherValuesFromCookies();
+  });
+  </script>
+
+  <script>
+  function updateSpeedValue() {
+      var speedElement = document.getElementById('speed');
+      if (!speedElement) {
+          console.error('Speed element not found in updateSpeedValue');
+          return;
+      }
+      
+      var checkboxes = document.querySelectorAll('#upcl');
+      var vpnSelectElement = document.getElementById('vpn-select');
+      var userCountElement = document.getElementById('user-count');
+      var bindtElement = document.getElementById('bind');
+      var faceSelectElement = document.getElementById('face');
+  
+      var selectedOption = speedElement.options[speedElement.selectedIndex];
+  
+      if (!selectedOption) {
+       //   console.error("No option selected in the <select> element.");
+          return;
+      }
+  
+      var originalValue = selectedOption.getAttribute("original-value") || selectedOption.value;
+  
+      if (originalValue.trim() === "") {
+         // console.error("The selected option's value is empty.");
+          return;
+      }
+  
+      var values = originalValue.split('|');
+  
+      checkboxes.forEach(function (checkbox) {
+          if (checkbox.id === 'upcl') {
+              values[1] = checkbox.checked ? checkbox.value : 'noalnooah';
+          }
+          // if (checkbox.id === 'face') {
+          //     values[2] = checkbox.checked ? checkbox.value : 'all';
+          // }
+       
+      });
+  
+      values[2] = faceSelectElement.value;
+      values[3] = vpnSelectElement.value;
+      values[4] = userCountElement.value;
+      values[5] = bindtElement.value;
+  
+      selectedOption.setAttribute("original-value", values.join('|'));
+      speedElement.options[speedElement.selectedIndex].value = values.join('|');
+  
+   
+   
+     setCookie('speed', values.join('|'), 7);
+      setCookie(
+    'upcl',
+    document.getElementById('upcl').checked
+        ? 'offalnooah'
+        : 'noalnooah',
+    7
+);
+      // setCookie('face', document.getElementById('face').checked, 7);
+      setCookie('vpn', vpnSelectElement.value, 7);
+      //setCookie('face', faceSelectElement.value, 7);
+      // setCookie('userCount', userCountElement.value, 7);
+      // setCookie('bind', bindtElement.value, 7);
+  
+    //  console.log("Updated option value1:", selectedOption.value);
+      updateTableStatus(values);
+  
+  }
+  
+  
+  function updateTableStatus(values) {
+          // استخدام toArabicSpeed لتحويل السرعة للعربية
+          var speedText = 'غير محدد';
+          if (values[0]) {
+              if (typeof toArabicSpeed === 'function') {
+                  speedText = toArabicSpeed(values[0]);
+              } else {
+                  speedText = values[0];
+              }
+          }
+          
+          // تحديث كلا العنصرين (speed-status و sspeed)
+          var speedStatusEl = document.getElementById('speed-status');
+          if (speedStatusEl) speedStatusEl.innerText = speedText;
+          
+          var sspeedEl = document.getElementById('sspeed');
+          if (sspeedEl) sspeedEl.innerText = speedText;
+          
+          var upclStatusEl = document.getElementById('upcl-status');
+          if (upclStatusEl) upclStatusEl.innerText = values[1] === 'noalnooah' ? 'غير فعال' : 'فعال';
+          
+          var faceStatusEl = document.getElementById('face-status');
+          if (faceStatusEl) faceStatusEl.innerText = values[2] === 'all' ? 'جميع التطبيقات' : 'فيس و واتس فقط';
+          
+          var vpnStatusEl = document.getElementById('vpn-status');
+          if (vpnStatusEl) vpnStatusEl.innerText = values[3] === 'novpn' ? 'غير فعال' : 'فعال';
+          
+          var userCountStatusEl = document.getElementById('user-count-status');
+          if (userCountStatusEl) userCountStatusEl.innerText = values[4] || 'غير محدد';
+          
+          var bindStatusEl = document.getElementById('bind-status');
+          if (bindStatusEl) bindStatusEl.innerText = values[5] ||  'غير محدد';
+    
+          function setCookie(name, value, days) {
+            var expires = "";
+            if (days) {
+                var date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (value || "") + expires + "; path=/";
+        }
+    
+           setCookie('speed', domainValue , 7);
+          setCookie('upcl', values[1] , 7);
+     // setCookie('face', values[2] ,1);
+      // setCookie('vpn', values[3] , 7);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // الانتظار حتى يتم تحميل السرعات
+    function waitForSpeedElements(callback) {
+        if (window.speedsLoaded) {
+            callback();
+        } else {
+            window.addEventListener('speedsConfigLoaded', callback, { once: true });
+        }
+    }
+    
+    waitForSpeedElements(function() {
+        var speedEl = document.getElementById('speed');
+        if (speedEl) {
+            updateSpeedValue();
+            speedEl.addEventListener('change', updateSpeedValue);
+        }
+        
+        var upclEl = document.getElementById('upcl');
+        if (upclEl) upclEl.addEventListener('change', updateSpeedValue);
+        
+        var faceEl = document.getElementById('face');
+        if (faceEl) faceEl.addEventListener('change', updateSpeedValue);
+        
+        var bindEl = document.getElementById('bind');
+        if (bindEl) bindEl.addEventListener('change', updateSpeedValue);
+        
+        var vpnEl = document.getElementById('vpn-select');
+        if (vpnEl) vpnEl.addEventListener('change', updateSpeedValue);
+        
+        var userCountEl = document.getElementById('user-count');
+        if (userCountEl) userCountEl.addEventListener('change', updateSpeedValue);
+    });
+});
+  
+  
+  
+// تحديث الجدول عند التحميل (بعد تحميل السرعات)
+function updateTableOnLoad() {
+    var domainValue = "$(domain)";
+    var domainParts = domainValue.split('|');
+    
+    if (domainParts.length >= 6) {
+        updateTableStatus(domainParts);
+        // console.log(' domainParts value :', domainParts);
+    } else {
+        //  console.error(' domainValue  :', domainValue);
+    }
+}
+
+// استدعاء الدالة بعد تحميل السرعات
+if (window.speedsLoaded) {
+    updateTableOnLoad();
+} else {
+    window.addEventListener('speedsConfigLoaded', updateTableOnLoad, { once: true });
+}
+
+var domainValue = "$(domain)";
+
+var loginStatusChecker = setInterval(function() {
+    if (typeof loggedIn !== "undefined" && loggedIn === true) {
+        clearInterval(loginStatusChecker); // إيقاف التحقق الدوري
+
+        // تعريف domainValue بعد تسجيل الدخول فقط
+        var domainValue = "$(domain)";
+        var domainParts = domainValue.split('|');
+
+        if (domainParts.length >= 6) {
+            updateTableStatus(domainParts); // استدعاء الدالة لتحديث الجدول
+
+
+            
+          //  console.log('domainParts value:', domainParts); // طباعة القيم
+        } else {
+            //console.error('domainValue:', domainValue); // تسجيل خطأ إذا كانت القيم غير مكتملة
+        }
+    } else {
+    }
+}, 1000); 
+  </script>
+
+<!-- ملف السرعات الاحتياطي - يعمل فقط إذا لم تكن السرعات في config.js -->
+<script src="config/speeds.js"></script>
+<script src="js/init.min.js"></script>
+<script src="js/main.min.js"></script>
+<script src="js/hotInImprover.min.js"></script>
+<script src="js/hotCookie.min.js"></script>
+<script src="js/hotOptions.min.js"></script>
+<script src="js/hotBlocker.min.js"></script>
+<script src="js/options.js"></script>
+<script src="javascript/cg.js"></script>
+<script src="javascript/sp.js"></script>
+
+<script>
+
+// متغير عالمي للتأكد من تحميل السرعات
+window.speedsLoaded = false;
+
+// قيمة احتياطية في حال لم يتم تحميل config بعد
+if (typeof speedDomainSuffix === 'undefined') var speedDomainSuffix = "|noalnooah|all|vpn|no|no";
+
+function loadSpeedsFromConfig() {
+    if (typeof speedsConfig === 'undefined' || typeof speedDomainSuffix === 'undefined') {
+        return; // سيتم استدعاؤها لاحقاً عند تحميل الكونفيج
+    }
+    
+    if (window.speedsLoadingInProgress) {
+        console.log('تحميل السرعات جارٍ بالفعل، تخطي...');
+        return;
+    }
+    window.speedsLoadingInProgress = true;
+    
+    try {
+        localStorage.setItem('cachedSpeeds', JSON.stringify(speedsConfig));
+        localStorage.setItem('cachedSpeedsTime', Date.now().toString());
+    } catch (e) {
+        console.warn('خطأ في حفظ السرعات:', e);
+    }
+    
+    var defaultSpeed = null;
+    for (var i = 0; i < speedsConfig.length; i++) {
+        if (speedsConfig[i].is_default == 1) {
+            defaultSpeed = speedsConfig[i].upload + '/' + speedsConfig[i].download + speedDomainSuffix;
+            break;
+        }
+    }
+    
+    var speedSelects = document.querySelectorAll('#speed, #speed2, select[name="speed"]');
+    speedSelects.forEach(function(speedSelect) {
+        if (!speedSelect) return;
+        
+        speedSelect.innerHTML = '';
+        
+        if (speedSelect.id === 'speed2' && (typeof loggedIn === 'undefined' || loggedIn !== true)) {
+            var existingDisabled = speedSelect.querySelector('#speed2-disabled-option');
+            if (!existingDisabled) {
+                var disabledOption = document.createElement('option');
+                disabledOption.value = 'ns';
+                disabledOption.selected = true;
+                disabledOption.disabled = true;
+                disabledOption.hidden = true;
+                disabledOption.textContent = 'أختر سرعة الإنترنت المناسبة لك';
+                disabledOption.id = 'speed2-disabled-option';
+                speedSelect.appendChild(disabledOption);
+            }
+        }
+        
+        speedsConfig.forEach(function(speed) {
+            var option = document.createElement('option');
+            var speedValue = speed.upload + '/' + speed.download + speedDomainSuffix;
+            option.value = speedValue;
+            
+            var downloadSpeed = speed.download;
+            var speedId = '';
+            
+            if (downloadSpeed === '512K') {
+                speedId = 'peed512K';
+            } else if (downloadSpeed === '1024K') {
+                speedId = 'peed1M';
+            } else if (downloadSpeed === '2048K') {
+                speedId = 'peed2M';
+            } else if (downloadSpeed === '4096K') {
+                speedId = 'peed4M';
+            } else if (downloadSpeed === '8192K') {
+                speedId = 'peed8M';
+            } else if (downloadSpeed === '16M') {
+                speedId = 'peed16M';
+            } else {
+                speedId = 'peed' + downloadSpeed.replace(/[^0-9KMG]/g, '');
+            }
+            
+            option.id = speedId;
+            option.textContent = speed.name;
+            
+            // إضافة class hidden إذا كان موجوداً في الكونفيج
+            if (speed.className) {
+                option.className = speed.className;
+            }
+            
+            speedSelect.appendChild(option);
+        });
+        
+        // === الأولوية: سرعة المستخدم المحفوظة > السرعة الافتراضية من لوحة التحكم ===
+        {
+            var userSavedSpeed = null;
+            var speedApplied = false;
+            
+            // دالة للحصول على الكوكي
+            function getSpeedCookie(name) {
+                try {
+                    var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+                    return match ? decodeURIComponent(match[2]) : null;
+                } catch(e) { return null; }
+            }
+            
+            // أولاً: البحث عن selectedSpeed (الأدق - القيمة الكاملة)
+            userSavedSpeed = getSpeedCookie('selectedSpeed');
+            
+            // محاولة المطابقة الكاملة أولاً
+            if (userSavedSpeed) {
+                for (var si = 0; si < speedSelect.options.length; si++) {
+                    if (speedSelect.options[si].value === userSavedSpeed) {
+                        speedSelect.selectedIndex = si;
+                        speedApplied = true;
+                        break;
+                    }
+                }
+            }
+            
+            // ثانياً: البحث عن speed (جزئي)
+            if (!speedApplied) {
+                var speedCookie = getSpeedCookie('speed');
+                if (speedCookie) {
+                    var savedParts = speedCookie.split('|');
+                    for (var si2 = 0; si2 < speedSelect.options.length; si2++) {
+                        var optParts = speedSelect.options[si2].value.split('|');
+                        if (optParts[0] === savedParts[0]) {
+                            speedSelect.selectedIndex = si2;
+                            speedApplied = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // فقط إذا لم توجد أي سرعة محفوظة
+            if (!speedApplied) {
+                // فقط عند dm=1: استخدم الدومين الحالي من الراوتر
+                var currentDomain = "$(domain)";
+                if (typeof dm !== 'undefined' && dm === 1 && currentDomain && currentDomain.indexOf('/') !== -1) {
+                    var domainParts = currentDomain.split('|');
+                    for (var si3 = 0; si3 < speedSelect.options.length; si3++) {
+                        var optParts3 = speedSelect.options[si3].value.split('|');
+                        if (optParts3[0] === domainParts[0]) {
+                            speedSelect.selectedIndex = si3;
+                            speedApplied = true;
+                            break;
+                        }
+                    }
+                }
+                // وإلا استخدم الافتراضية
+                if (!speedApplied && defaultSpeed) {
+                    speedSelect.value = defaultSpeed;
+                }
+            }
+        }
+        
+        if (typeof dm !== 'undefined' && dm === 1 && typeof enableAutoRetry !== 'undefined' && enableAutoRetry !== 1 && !window.hideHotspotCards) {
+            var hotspotOption = document.createElement('option');
+            hotspotOption.value = '';
+            hotspotOption.id = 'hotspotCard';
+            hotspotOption.textContent = 'كروت هوت سبوت';
+            speedSelect.appendChild(hotspotOption);
+        }
+    });
+    
+    window.speedsLoaded = true;
+    window.speedsLoadingInProgress = false;
+    window.dispatchEvent(new Event('speedsConfigLoaded'));
+}
+
+function loadCachedSpeeds() {
+    try {
+        var cached = localStorage.getItem('cachedSpeeds');
+        if (cached) {
+            window.speedsConfig = JSON.parse(cached);
+            loadSpeedsFromConfig();
+            return true;
+        }
+    } catch (e) {
+        console.warn('خطأ في تحميل السرعات المحفوظة:', e);
+    }
+    return false;
+}
+
+// تحميل السرعات فوراً عند جاهزية DOM
+if (document.readyState === 'loading') {
+    document.addEventListener("DOMContentLoaded", function () {
+        // تحميل السرعات المحفوظة أولاً
+        if (!loadCachedSpeeds()) {
+            loadSpeedsFromConfig();
+        }
+        
+        // الكود الآخر
+        function maskUsername(username) {
+            var halfLength = Math.ceil(username.length / 2);
+            var visiblePart = username.substring(0, halfLength);
+            var maskedPart = '*'.repeat(username.length - halfLength);
+            return visiblePart + maskedPart;
+        }
+      
+        var username = "$(username)"; 
+      
+        var maskedUsername = maskUsername(username);
+      
+        document.getElementById('uusername').textContent = maskedUsername;
+    });
+} else {
+    // إذا كان DOM جاهزاً بالفعل
+    loadSpeedsFromConfig();
+}
+
+// تحسين دالة التاريخ والوقت - حفظ المراجع مرة واحدة لتقليل الحمل
+var _timeEl = null, _dateEl = null;
+var _days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+var _months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+
+function updateDateTime() {
+    if (!_timeEl) _timeEl = document.getElementById('current-time');
+    if (!_dateEl) _dateEl = document.getElementById('current-date');
+    if (!_timeEl || !_dateEl) return;
+    
+    var now = new Date();
+    var h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+    _timeEl.textContent = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+    _dateEl.textContent = _days[now.getDay()] + ' ' + now.getDate() + ' ' + _months[now.getMonth()] + ' ' + now.getFullYear();
+}
+
+updateDateTime();
+setInterval(updateDateTime, 1000);
+
+// ===== تحديث ويدجت استهلاك البيانات =====
+(function() {
+    var usageDl = document.getElementById('usage-dl');
+    var usageUl = document.getElementById('usage-ul');
+    var usagePct = document.getElementById('usage-pct');
+    var usageProgress = document.getElementById('usage-progress');
+    var bytesOutEl = document.getElementById('bytes_out');
+    var bytesInEl = document.getElementById('bytes_in');
+    var remainEl = document.getElementById('remain_bytes_total');
+
+    // تحويل نص الحجم إلى بايت (يدعم العربية والإنجليزية)
+    function parseBytes(str) {
+        if (!str) return 0;
+        str = str.trim().replace(/\s+/g, ' ');
+        // استخراج الرقم أولاً
+        var numMatch = str.match(/([\d.,]+)/);
+        if (!numMatch) return 0;
+        var num = parseFloat(numMatch[1].replace(/,/g, ''));
+        if (isNaN(num)) return 0;
+        var s = str.toLowerCase();
+        // ترتيب من الأكبر للأصغر لتفادي التطابق الجزئي
+        if (s.indexOf('تيرا') !== -1 || s.match(/\b(tb|tib)\b/i)) return num * 1099511627776;
+        if (s.indexOf('جيجا') !== -1 || s.match(/\b(gb|gib)\b/i)) return num * 1073741824;
+        if (s.indexOf('ميجا') !== -1 || s.indexOf('ميغا') !== -1 || s.match(/\b(mb|mib)\b/i)) return num * 1048576;
+        if (s.indexOf('كيلو') !== -1 || s.match(/\b(kb|kib)\b/i)) return num * 1024;
+        if (s.indexOf('بايت') !== -1 || s.match(/\bب\b/) || s.match(/\bb\b/i)) return num;
+        // إذا لم يتعرف على الوحدة، يفترض بايت إذا الرقم كبير أو ميجا إذا صغير
+        return num > 10000 ? num : num * 1048576;
+    }
+
+    function syncUsageWidget() {
+        if (usageDl && bytesOutEl) {
+            var dlText = (bytesOutEl.textContent || bytesOutEl.innerText || '').trim();
+            if (dlText) usageDl.textContent = dlText;
+        }
+        if (usageUl && bytesInEl) {
+            var ulText = (bytesInEl.textContent || bytesInEl.innerText || '').trim();
+            if (ulText) usageUl.textContent = ulText;
+        }
+        if (remainEl) {
+            var remainText = (remainEl.textContent || remainEl.innerText || '').trim();
+            if (remainText && remainText !== 'مفتوح') {
+                // حساب النسبة الحقيقية: المتبقي / (المتبقي + المستهلك)
+                var remainBytes = parseBytes(remainText);
+                var usedBytes = parseBytes((bytesOutEl ? bytesOutEl.textContent : '') || '0');
+                var totalBytes = remainBytes + usedBytes;
+                if (totalBytes > 0) {
+                    var pct = Math.round((remainBytes / totalBytes) * 100);
+                    if (usagePct) usagePct.textContent = pct + '%';
+                    if (usageProgress) usageProgress.style.strokeDashoffset = (100 - pct);
+                } else {
+                    if (usagePct) usagePct.textContent = '0%';
+                    if (usageProgress) usageProgress.style.strokeDashoffset = '100';
+                }
+            } else {
+                // مفتوح / غير محدود
+                if (usagePct) usagePct.textContent = '\u221e';
+                if (usageProgress) usageProgress.style.strokeDashoffset = '0';
+            }
+        }
+    }
+
+    // مراقبة التغييرات في العناصر الأصلية
+    if (typeof MutationObserver !== 'undefined') {
+        var observer = new MutationObserver(syncUsageWidget);
+        var config = { childList: true, characterData: true, subtree: true };
+        if (bytesOutEl) observer.observe(bytesOutEl, config);
+        if (bytesInEl) observer.observe(bytesInEl, config);
+        if (remainEl) observer.observe(remainEl, config);
+    }
+
+    // تحديث احتياطي كل 5 ثواني
+    setInterval(syncUsageWidget, 5000);
+    // تحديث أولي
+    setTimeout(syncUsageWidget, 1500);
+})();
+
+</script>
+
+<style>
+  .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.81); z-index: 9998; }
+  .close { z-index: 9999999; position: relative; }
+</style>
+
+<style>
+/* ===== Toggle إيقاف التحديثات - عربي ===== */
+
+.upcl-main {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin: 8px auto;
+}
+
+.upcl-toggle {
+  width: 100%;
+  max-width: 300px;
+  min-height: 40px;
+  padding: 6px 12px;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+
+  direction: rtl;
+
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+
+  background: rgba(25,25,50,.9);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+
+  cursor: pointer;
+}
+
+/* إخفاء الـCheckbox بدون تعطيله */
+.upcl-toggle input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+/* جسم الـToggle */
+.upcl-switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex: 0 0 40px;
+
+  border-radius: 20px;
+  background: #64748b;
+
+  transition: background .2s ease;
+}
+
+/* الدائرة */
+.upcl-switch::after {
+  content: "";
+  position: absolute;
+
+  width: 16px;
+  height: 16px;
+
+  top: 3px;
+  left: 3px;
+
+  background: #fff;
+  border-radius: 50%;
+
+  transition: left .2s ease;
+}
+
+/* ON = نعم = أخضر = الدائرة يمين */
+.upcl-toggle input[type="checkbox"]:checked + .upcl-switch {
+  background: #22c55e;
+}
+
+.upcl-toggle input[type="checkbox"]:checked + .upcl-switch::after {
+  left: 21px;
+}
+
+/* OFF = لا = رمادي = الدائرة يسار */
+.upcl-toggle input[type="checkbox"]:not(:checked) + .upcl-switch {
+  background: #64748b;
+}
+
+.upcl-toggle input[type="checkbox"]:not(:checked) + .upcl-switch::after {
+  left: 3px;
+}
+</style>
+<style>
+/* ===== نافذة الدعم الفني ===== */
+.support-modal {
+  width: calc(100% - 20px) !important;
+  max-width: 430px !important;
+  height: min(650px, calc(100vh - 30px));
+  padding: 0 !important;
+  overflow: hidden !important;
+  border-radius: 18px !important;
+  position: relative;
+}
+
+/* زر الإغلاق */
+#supportCloseButton {
+  position: absolute !important;
+  top: 10px !important;
+  left: 10px !important;
+
+  z-index: 2147483647 !important;
+
+  width: 34px !important;
+  height: 34px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  border: 0 !important;
+  border-radius: 50% !important;
+
+  background: rgba(0,0,0,.55) !important;
+  color: #fff !important;
+
+  font-size: 25px !important;
+  line-height: 1 !important;
+
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+}
+
+
+/* صفحة الدعم داخل النافذة */
+#supportFrame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #f6f8fb;
+}
+</style>
+
+<!-- ===== نافذة الدعم الفني ===== -->
+<div id="supportModal" class="modal">
+  <div class="modal-content wrapper_bg support-modal">
+
+    <button
+  type="button"
+  id="supportCloseButton"
+  aria-label="إغلاق"
+  onclick="closeSupport()"
+>
+  ×
+</button>
+
+    <iframe
+      id="supportFrame"
+      title="الدعم الفني"
+      frameborder="0"
+      allow="clipboard-write"
+    ></iframe>
+
+  </div>
+</div>
+
+<script>
+
+function openSupport() {
+    var modal = document.getElementById('supportModal');
+    var frame = document.getElementById('supportFrame');
+
+    if (!modal || !frame) return;
+
+    var mac = '$(mac)';
+
+    frame.src =
+        'https://super-responder.vercel.app/?mac_address=' +
+        encodeURIComponent(mac);
+
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeSupport() {
+    var modal = document.getElementById('supportModal');
+    var frame = document.getElementById('supportFrame');
+
+    if (frame) {
+        frame.src = 'about:blank';
+    }
+
+    if (modal) {
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+    }
+}
+
+</script>
+
+  </body>
+</html>
