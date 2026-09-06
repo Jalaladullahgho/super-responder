@@ -1,16 +1,17 @@
 const SUPABASE_FUNCTION_URL = "https://quylfcqnzubxedlatzpv.supabase.co/functions/v1/super-responder";
 const SUPABASE_URL = "https://quylfcqnzubxedlatzpv.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_9Nl91eoKWdraNH_kw2cCIg_GHRn-IJJ";
+const AUTH_STORAGE_KEY = "super_responder_anonymous_session_v1";
 
 const params = new URLSearchParams(window.location.search);
 const macAddress = (params.get("mac_address") || "").trim();
 
 let currentConversationId = null;
-let supabase = null;
-let channel = null;
-let renderedIds = new Set();
-let realtimeRetryTimer = null;
+let session = null;
 let authReady = false;
+let pollTimer = null;
+let sending = false;
+let lastRenderedIds = new Set();
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({
@@ -31,26 +32,139 @@ function formatTime(value) {
   }
 }
 
-function trimClientMessages(messagesEl) {
+function decodeJwtPayload(token) {
+  try {
+    const part = token.split(".")[1];
+    if (!part) return null;
+    const normalized = part.replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(decodeURIComponent(escape(atob(normalized))));
+  } catch {
+    return null;
+  }
+}
+
+function sessionStillValid(value) {
+  const exp = Number(decodeJwtPayload(value?.access_token)?.exp || 0);
+  return Boolean(value?.access_token && value?.refresh_token && exp > Math.floor(Date.now() / 1000) + 30);
+}
+
+function loadStoredSession() {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    const value = JSON.parse(raw);
+    return sessionStillValid(value) ? value : value?.refresh_token ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSession(value) {
+  session = value;
+  try {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(value));
+  } catch {}
+}
+
+async function refreshSession(refreshToken) {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ refresh_token: refreshToken })
+  });
+  const text = await response.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = { raw: text }; }
+  if (!response.ok || !data?.access_token) {
+    throw new Error(data?.error_description || data?.msg || data?.error || `Auth refresh HTTP ${response.status}`);
+  }
+  saveSession(data);
+  return data;
+}
+
+async function createAnonymousSession() {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({})
+  });
+  const text = await response.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = { raw: text }; }
+  if (!response.ok || !data?.access_token) {
+    throw new Error(data?.error_description || data?.msg || data?.error || `Anonymous Auth HTTP ${response.status}`);
+  }
+  saveSession(data);
+  return data;
+}
+
+async function ensureAnonymousSession() {
+  const stored = loadStoredSession();
+  if (stored?.access_token) {
+    if (sessionStillValid(stored)) {
+      session = stored;
+      authReady = true;
+      return session;
+    }
+    if (stored.refresh_token) {
+      try {
+        await refreshSession(stored.refresh_token);
+        authReady = true;
+        return session;
+      } catch {
+        try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch {}
+      }
+    }
+  }
+
+  session = await createAnonymousSession();
+  authReady = true;
+  return session;
+}
+
+async function authHeaders(extra = {}, allowRetry = true) {
+  if (!authReady || !session?.access_token) throw new Error("جلسة المصادقة غير موجودة");
+  if (!sessionStillValid(session) && session?.refresh_token) {
+    await refreshSession(session.refresh_token);
+  }
+  return {
+    apikey: SUPABASE_PUBLISHABLE_KEY,
+    Authorization: `Bearer ${session.access_token}`,
+    "Content-Type": "application/json",
+    ...extra
+  };
+}
+
+async function requestFunction(url, options = {}, retry = true) {
+  const headers = await authHeaders(options.headers || {});
+  const response = await fetch(url, { ...options, headers, cache: "no-store" });
+  if (response.status === 401 && retry && session?.refresh_token) {
+    await refreshSession(session.refresh_token);
+    return requestFunction(url, options, false);
+  }
+  return response;
+}
+
+function trimMessages(messagesEl) {
   while (messagesEl.children.length > 20) {
-    const first = messagesEl.firstElementChild;
-    if (!first) break;
-    const id = first.dataset.messageId;
-    if (id) renderedIds.delete(String(id));
-    first.remove();
+    messagesEl.firstElementChild?.remove();
   }
 }
 
 function appendMessage(messagesEl, item, optimistic = false) {
-  if (!optimistic && item?.id != null && renderedIds.has(String(item.id))) return;
+  if (!optimistic && item?.id != null && lastRenderedIds.has(String(item.id))) return;
 
   const wrapper = document.createElement("div");
-  const type = item?.sender === "client" ? "user" : "support";
-  wrapper.className = `message ${type}`;
-
+  wrapper.className = `message ${item?.sender === "client" ? "user" : "support"}`;
   if (item?.id != null) {
     wrapper.dataset.messageId = String(item.id);
-    renderedIds.add(String(item.id));
+    lastRenderedIds.add(String(item.id));
   }
   if (optimistic) wrapper.dataset.optimistic = "true";
 
@@ -67,7 +181,7 @@ function appendMessage(messagesEl, item, optimistic = false) {
 
   wrapper.appendChild(bubble);
   messagesEl.appendChild(wrapper);
-  trimClientMessages(messagesEl);
+  trimMessages(messagesEl);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
@@ -78,131 +192,48 @@ function removeOptimistic(messagesEl, text) {
   });
 }
 
-function renderMessages(messagesEl, data) {
+function renderInitialMessages(messagesEl, data) {
   messagesEl.innerHTML = "";
-  renderedIds = new Set();
+  lastRenderedIds = new Set();
   data.slice(-20).forEach(item => appendMessage(messagesEl, item));
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-async function authHeaders(extra = {}) {
-  if (!supabase) throw new Error("تعذر تحميل الاتصال بالمصادقة");
-  const { data, error } = await supabase.auth.getSession();
-  if (error) throw error;
-  const accessToken = data?.session?.access_token;
-  if (!accessToken) throw new Error("جلسة المصادقة غير موجودة");
-  return {
-    apikey: SUPABASE_PUBLISHABLE_KEY,
-    Authorization: `Bearer ${accessToken}`,
-    "Content-Type": "application/json",
-    ...extra
-  };
-}
+function mergeMessages(messagesEl, data) {
+  const serverIds = new Set(data.map(item => String(item?.id)).filter(id => id !== "undefined"));
 
-async function ensureAnonymousSession() {
-  if (!supabase) throw new Error("تعذر تحميل مكتبة Supabase");
+  [...messagesEl.querySelectorAll('[data-optimistic="true"]')].forEach(el => {
+    const bubbleText = el.querySelector(".bubble")?.textContent || "";
+    const exists = data.some(item => item?.sender === "client" && bubbleText.startsWith(String(item.message || "")));
+    if (exists) el.remove();
+  });
 
-  const { data: existing, error: existingError } = await supabase.auth.getSession();
-  if (existingError) throw existingError;
+  data.slice(-20).forEach(item => {
+    if (!serverIds.has(String(item?.id))) return;
+    appendMessage(messagesEl, item);
+  });
 
-  if (existing?.session?.user) {
-    authReady = true;
-    return existing.session;
-  }
-
-  const { data, error } = await supabase.auth.signInAnonymously();
-  if (error) throw error;
-  if (!data?.session?.access_token) throw new Error("لم يتم إنشاء جلسة Anonymous");
-
-  authReady = true;
-  return data.session;
+  if (data.length) messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
 async function bootstrapConversation() {
   if (!macAddress || !authReady) return null;
 
-  const query = new URLSearchParams({
-    action: "bootstrap",
-    mac_address: macAddress
-  });
-
+  const query = new URLSearchParams({ action: "bootstrap", mac_address: macAddress });
   if (currentConversationId) query.set("conversation_id", String(currentConversationId));
 
-  const response = await fetch(`${SUPABASE_FUNCTION_URL}?${query.toString()}`, {
-    headers: await authHeaders(),
-    cache: "no-store"
-  });
-
+  const response = await requestFunction(`${SUPABASE_FUNCTION_URL}?${query.toString()}`);
   const text = await response.text();
   let data;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    data = { raw: text };
-  }
-
-  if (!response.ok) {
-    throw new Error(data?.error || data?.message || data?.raw || `HTTP ${response.status}`);
-  }
-
+  try { data = JSON.parse(text); } catch { data = { raw: text }; }
+  if (!response.ok) throw new Error(data?.error || data?.message || data?.raw || `HTTP ${response.status}`);
   if (data?.conversation?.id) currentConversationId = data.conversation.id;
   return data;
 }
 
-function scheduleRealtimeRetry(messagesEl, statusText) {
-  if (realtimeRetryTimer || !currentConversationId) return;
-  realtimeRetryTimer = setTimeout(() => {
-    realtimeRetryTimer = null;
-    subscribeToConversation(messagesEl, statusText);
-  }, 4000);
-}
-
-function subscribeToConversation(messagesEl, statusText) {
-  if (!supabase || !currentConversationId || !authReady) return;
-
-  if (channel) {
-    try {
-      supabase.removeChannel(channel);
-    } catch {}
-    channel = null;
-  }
-
-  const conversationId = String(currentConversationId);
-
-  channel = supabase
-    .channel(`client-messages-${conversationId}`, { config: { private: true } })
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "messages",
-        filter: `conversation_id=eq.${conversationId}`
-      },
-      payload => {
-        const item = payload.new;
-        [...messagesEl.querySelectorAll('[data-optimistic="true"]')].forEach(el => {
-          const bubbleText = el.querySelector(".bubble")?.textContent || "";
-          if (bubbleText.startsWith(item?.message || "")) el.remove();
-        });
-        appendMessage(messagesEl, item);
-        statusText.textContent = "متصل";
-      }
-    )
-    .subscribe(status => {
-      if (status === "SUBSCRIBED") {
-        statusText.textContent = "متصل";
-      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-        statusText.textContent = "إعادة الاتصال...";
-        scheduleRealtimeRetry(messagesEl, statusText);
-      }
-    });
-}
-
 async function sendMessage(message) {
-  const response = await fetch(SUPABASE_FUNCTION_URL, {
+  const response = await requestFunction(SUPABASE_FUNCTION_URL, {
     method: "POST",
-    headers: await authHeaders(),
     body: JSON.stringify({
       mac_address: macAddress,
       message,
@@ -212,17 +243,32 @@ async function sendMessage(message) {
 
   const text = await response.text();
   let data;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    data = { raw: text };
-  }
-
-  if (!response.ok) {
-    throw new Error(data?.error || data?.message || data?.raw || `HTTP ${response.status}`);
-  }
-
+  try { data = JSON.parse(text); } catch { data = { raw: text }; }
+  if (!response.ok) throw new Error(data?.error || data?.message || data?.raw || `HTTP ${response.status}`);
   return data;
+}
+
+async function syncMessages(messagesEl, statusText, initial = false) {
+  try {
+    const data = await bootstrapConversation();
+    const list = Array.isArray(data?.messages) ? data.messages : [];
+    if (initial) renderInitialMessages(messagesEl, list);
+    else mergeMessages(messagesEl, list);
+    statusText.textContent = "متصل";
+    return true;
+  } catch (error) {
+    console.error(error);
+    statusText.textContent = `تعذر الاتصال: ${error?.message || "خطأ غير معروف"}`;
+    return false;
+  }
+}
+
+function startPolling(messagesEl, statusText) {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(() => {
+    if (sending || !authReady || !currentConversationId) return;
+    syncMessages(messagesEl, statusText, false);
+  }, 2500);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -232,59 +278,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const sendButton = document.getElementById("send-button");
   const statusText = document.getElementById("status");
 
-  if (!form || !input || !messages || !sendButton || !statusText) {
-    console.error("Chat UI elements are missing");
-    return;
-  }
-
-  // Prevent native form navigation before any async initialization happens.
-  form.addEventListener("submit", async event => {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const message = input.value.trim();
-    if (!message) return;
-    if (!macAddress) {
-      statusText.textContent = "عنوان MAC غير موجود";
-      return;
-    }
-    if (!authReady) {
-      statusText.textContent = "جاري تجهيز الاتصال...";
-      return;
-    }
-
-    appendMessage(messages, { sender: "client", message }, true);
-    input.value = "";
-    sendButton.disabled = true;
-    input.disabled = true;
-    statusText.textContent = "جاري الإرسال...";
-
-    try {
-      const data = await sendMessage(message);
-
-      if (data?.conversation_id && String(data.conversation_id) !== String(currentConversationId)) {
-        currentConversationId = data.conversation_id;
-        subscribeToConversation(messages, statusText);
-      }
-
-      removeOptimistic(messages, message);
-      if (data?.user_message) appendMessage(messages, data.user_message);
-      if (data?.response) appendMessage(messages, data.response);
-      statusText.textContent = "متصل";
-    } catch (error) {
-      console.error(error);
-      removeOptimistic(messages, message);
-      appendMessage(messages, {
-        sender: "admin",
-        message: `تعذر إرسال الرسالة: ${error?.message || "خطأ غير معروف"}`
-      });
-      statusText.textContent = "تعذر الاتصال";
-    } finally {
-      sendButton.disabled = false;
-      input.disabled = false;
-      input.focus();
-    }
-  });
+  if (!form || !input || !messages || !sendButton || !statusText) return;
 
   if (!macAddress) {
     statusText.textContent = "عنوان MAC غير موجود";
@@ -293,39 +287,55 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  (async () => {
+  // The input remains usable while authentication initializes.
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const message = input.value.trim();
+    if (!message) return;
+    if (!authReady) {
+      statusText.textContent = "جاري تجهيز الاتصال...";
+      return;
+    }
+    if (sending) return;
+
+    sending = true;
+    appendMessage(messages, { sender: "client", message }, true);
+    input.value = "";
+    sendButton.disabled = true;
+    statusText.textContent = "جاري الإرسال...";
+
     try {
-      if (!window.supabase?.createClient) {
-        throw new Error("تعذر تحميل مكتبة Supabase");
-      }
-
-      supabase = window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_PUBLISHABLE_KEY,
-        {
-          auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: false
-          }
-        }
-      );
-
-      await ensureAnonymousSession();
-      const bootstrap = await bootstrapConversation();
-
-      renderMessages(messages, Array.isArray(bootstrap?.messages) ? bootstrap.messages : []);
-
-      if (bootstrap?.conversation?.id) {
-        subscribeToConversation(messages, statusText);
-      }
-
+      const data = await sendMessage(message);
+      if (data?.conversation_id) currentConversationId = data.conversation_id;
+      removeOptimistic(messages, message);
+      if (data?.user_message) appendMessage(messages, data.user_message);
+      if (data?.response) appendMessage(messages, data.response);
       statusText.textContent = "متصل";
     } catch (error) {
       console.error(error);
+      removeOptimistic(messages, message);
+      appendMessage(messages, { sender: "admin", message: `تعذر إرسال الرسالة: ${error?.message || "خطأ غير معروف"}` });
+      statusText.textContent = "تعذر الاتصال";
+    } finally {
+      sending = false;
+      sendButton.disabled = false;
+      input.disabled = false;
+      input.focus();
+    }
+  });
+
+  (async () => {
+    try {
+      await ensureAnonymousSession();
+      await syncMessages(messages, statusText, true);
+      startPolling(messages, statusText);
+    } catch (error) {
+      console.error(error);
       statusText.textContent = `تعذر الاتصال: ${error?.message || "خطأ غير معروف"}`;
-      input.disabled = true;
-      sendButton.disabled = true;
+      input.disabled = false;
+      sendButton.disabled = false;
     }
   })();
 });
