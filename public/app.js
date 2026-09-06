@@ -78,7 +78,7 @@ function subscribeToConversation() {
   if (!supabase || !currentConversationId || !authReady) return;
   if (channel) { try { supabase.removeChannel(channel); } catch {} channel = null; }
   const conversationId = String(currentConversationId);
-  channel = supabase.channel(`client-messages-${conversationId}`)
+  channel = supabase.channel(`client-messages-${conversationId}`, { config: { private: true } })
     .on("postgres_changes", { event:"INSERT", schema:"public", table:"messages", filter:`conversation_id=eq.${conversationId}` }, payload => {
       const item = payload.new;
       [...messages.querySelectorAll('[data-optimistic="true"]')].forEach(el => { if (el.querySelector(".bubble")?.textContent?.startsWith(item.message)) el.remove(); });
