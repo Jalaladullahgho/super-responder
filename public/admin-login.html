@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>دخول الإدارة</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f6f8;font-family:Arial,sans-serif;color:#18212b}.card{width:min(92vw,390px);background:#fff;border-radius:18px;padding:28px;box-shadow:0 10px 35px #00000012}.logo{text-align:center;font-size:25px;font-weight:700;margin-bottom:7px}.sub{text-align:center;color:#687481;font-size:14px;margin-bottom:24px}label{display:block;font-size:14px;margin:14px 0 7px}input{width:100%;padding:13px;border:1px solid #d6dde4;border-radius:10px;font-size:16px;outline:0}input:focus{border-color:#6573ff}button{width:100%;border:0;border-radius:10px;padding:13px;margin-top:20px;font-size:16px;font-weight:700;cursor:pointer;background:#202938;color:#fff}button:disabled{opacity:.6}.msg{min-height:22px;text-align:center;margin-top:14px;font-size:14px}.err{color:#c62828}.ok{color:#2e7d32}.hint{font-size:12px;color:#7a858f;text-align:center;margin-top:18px}
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="logo">لوحة الدعم</div>
+  <div class="sub">تسجيل دخول إدارة الشبكة</div>
+  <form id="loginForm">
+    <label for="network">رقم الشبكة</label>
+    <input id="network" inputmode="numeric" autocomplete="username" maxlength="4" placeholder="0001" required>
+    <label for="password">كلمة المرور</label>
+    <input id="password" type="password" autocomplete="current-password" maxlength="128" required>
+    <button id="loginBtn" type="submit">دخول</button>
+  </form>
+  <div id="msg" class="msg"></div>
+  <div class="hint">يتم التحقق من صلاحية الشبكة قبل فتح لوحة الإدارة.</div>
+</main>
+<script>
+const SUPABASE_URL='https://quylfcqnzubxedlatzpv.supabase.co';
+const SUPABASE_KEY='sb_publishable_9Nl91eoKWdraNH_kw2cCIg_GHRn-IJJ';
+const SESSION_KEY='super_responder_admin_session_v1';
+const form=document.getElementById('loginForm'), btn=document.getElementById('loginBtn'), msg=document.getElementById('msg');
+function show(text,ok=false){msg.textContent=text;msg.className='msg '+(ok?'ok':'err')}
+function saveSession(data){localStorage.setItem(SESSION_KEY,JSON.stringify({access_token:data.access_token,refresh_token:data.refresh_token,user:data.user}));}
+async function login(network,password){
+  const email='network-'+network+'@super-responder.invalid';
+  const r=await fetch(SUPABASE_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok||!data.access_token) throw new Error(data.error_description||data.msg||'بيانات الدخول غير صحيحة');
+  const uid=data.user&&data.user.id;
+  if(!uid) throw new Error('تعذر التحقق من هوية الحساب');
+  const check=await fetch(SUPABASE_URL+'/rest/v1/admin_users?select=network_id&auth_user_id=eq.'+encodeURIComponent(uid),{headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+data.access_token}});
+  const rows=await check.json().catch(()=>[]);
+  if(!check.ok||!Array.isArray(rows)||!rows.length) throw new Error('هذا الحساب ليس حساب إدارة');
+  saveSession(data);
+}
+form.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const network=document.getElementById('network').value.trim();
+  const password=document.getElementById('password').value;
+  if(!/^\d{4}$/.test(network)){show('رقم الشبكة يجب أن يتكون من 4 أرقام');return}
+  if(!password){show('أدخل كلمة المرور');return}
+  btn.disabled=true;show('جاري التحقق...',true);
+  try{await login(network,password);show('تم الدخول...',true);location.replace('admin-support.html')}catch(err){show(err.message||'فشل تسجيل الدخول')}finally{btn.disabled=false}
+});
+</script>
+</body>
+</html>
