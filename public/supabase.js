@@ -1,6 +1,47 @@
 (function () {
   "use strict";
 
+  const ADMIN_SESSION_KEY = "super_responder_admin_session_v1";
+  const isAdminPanel = /\/admin-support\.html$/i.test(location.pathname);
+
+  function getAdminSession() {
+    try {
+      const raw = localStorage.getItem(ADMIN_SESSION_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) { return null; }
+  }
+
+  function adminAccessToken() {
+    const s = getAdminSession();
+    return s && s.access_token ? s.access_token : "";
+  }
+
+  if (isAdminPanel && !adminAccessToken()) {
+    location.replace("admin-login.html");
+    return;
+  }
+
+  if (isAdminPanel) {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = function (input, init) {
+      const url = typeof input === "string" ? input : (input && input.url) || "";
+      const isSupabaseRest = url.indexOf("/rest/v1/") !== -1;
+      if (!isSupabaseRest) return originalFetch(input, init);
+
+      const token = adminAccessToken();
+      if (!token) {
+        location.replace("admin-login.html");
+        return Promise.reject(new Error("Admin session missing"));
+      }
+
+      const options = init ? { ...init } : {};
+      const headers = new Headers(options.headers || (input && input.headers) || {});
+      headers.set("Authorization", "Bearer " + token);
+      options.headers = headers;
+      return originalFetch(input, options);
+    };
+  }
+
   class RealtimeChannel {
     constructor(client, name) {
       this.client = client;
@@ -36,7 +77,9 @@
       if (this.socket) {
         try { this.socket.close(); } catch (_) {}
       }
-      const url = `${this.client.url}/realtime/v1/websocket?apikey=${encodeURIComponent(this.client.key)}&vsn=1.0.0`;
+      const token = this.client.accessToken || "";
+      const query = `apikey=${encodeURIComponent(this.client.key)}&vsn=1.0.0` + (token ? `&access_token=${encodeURIComponent(token)}` : "");
+      const url = `${this.client.url}/realtime/v1/websocket?${query}`;
       this.socket = new WebSocket(url);
 
       this.socket.onopen = () => {
@@ -50,6 +93,7 @@
             private: false
           }
         };
+        if (token) payload.access_token = token;
         this.socket.send(JSON.stringify({
           topic: this.topic,
           event: "phx_join",
@@ -141,6 +185,7 @@
     constructor(url, key) {
       this.url = String(url).replace(/\/$/, "");
       this.key = key;
+      this.accessToken = isAdminPanel ? adminAccessToken() : "";
       this.channels = new Set();
     }
 
