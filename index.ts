@@ -1,88 +1,25 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "jsr:@supabase/server@^1";
-
-interface ChatPayload { mac_address?: string; username?: string; message?: string; conversation_id?: number | string | null; }
-const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "GET, POST, OPTIONS" };
-const AUTO_REPLY = "تم استلام رسالتك بنجاح. سيتم الرد عليك من الدعم.";
-function jsonResponse(payload: unknown, status = 200) { return new Response(JSON.stringify(payload), { status, headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "no-store" } }); }
-function normalizeConversationId(value: unknown): number | null { if (value === null || value === undefined || value === "") return null; const id = typeof value === "number" ? value : Number(value); return Number.isSafeInteger(id) && id > 0 ? id : null; }
-function normalizeMac(value: string | null | undefined) { return (value || "").trim(); }
-
-export default { fetch: withSupabase({ auth: ["publishable", "secret"] }, async (req, ctx) => {
-  if (req.method === "OPTIONS") return new Response("ok", { status: 200, headers: corsHeaders });
-  const supabase = ctx.supabase;
-
-  if (req.method === "GET") {
-    const url = new URL(req.url);
-    if ((url.searchParams.get("action") || "health") !== "bootstrap") return jsonResponse({ success: true, service: "super-responder", status: "online" });
-    const macAddress = normalizeMac(url.searchParams.get("mac_address"));
-    if (!macAddress) return jsonResponse({ success: false, error: "mac_address is required" }, 400);
-    const requestedConversationId = normalizeConversationId(url.searchParams.get("conversation_id"));
-    try {
-      const { data: client, error: clientError } = await supabase.from("clients").select("id, mac_address, username").eq("mac_address", macAddress).maybeSingle();
-      if (clientError) throw new Error(`Client lookup failed: ${clientError.message}`);
-      if (!client) return jsonResponse({ success: true, client: null, conversation: null, messages: [] });
-      let conversation = null;
-      if (requestedConversationId !== null) {
-        const { data, error } = await supabase.from("conversations").select("id, client_id, status, created_at, updated_at").eq("id", requestedConversationId).eq("client_id", client.id).maybeSingle();
-        if (error) throw new Error(`Conversation validation failed: ${error.message}`);
-        conversation = data;
-      }
-      if (!conversation) {
-        const { data, error } = await supabase.from("conversations").select("id, client_id, status, created_at, updated_at").eq("client_id", client.id).order("updated_at", { ascending: false }).order("created_at", { ascending: false }).limit(1).maybeSingle();
-        if (error) throw new Error(`Conversation lookup failed: ${error.message}`);
-        conversation = data;
-      }
-      if (!conversation) return jsonResponse({ success: true, client: { id: client.id, username: client.username }, conversation: null, messages: [] });
-      const { data: messages, error: messagesError } = await supabase.from("messages").select("id, conversation_id, sender, message, created_at").eq("conversation_id", conversation.id).order("created_at", { ascending: false }).limit(20);
-      if (messagesError) throw new Error(`Message history failed: ${messagesError.message}`);
-      return jsonResponse({ success: true, client: { id: client.id, username: client.username }, conversation, messages: (messages || []).reverse() });
-    } catch (error) { console.error("bootstrap error:", error); return jsonResponse({ success: false, error: error instanceof Error ? error.message : "Internal Server Error" }, 500); }
-  }
-
-  if (req.method !== "POST") return jsonResponse({ success: false, error: "Method not allowed" }, 405);
-  try {
-    const body: ChatPayload = await req.json();
-    const macAddress = body.mac_address?.trim(); const username = body.username?.trim() || null; const message = body.message?.trim(); const requestedConversationId = normalizeConversationId(body.conversation_id);
-    if (!macAddress) return jsonResponse({ success: false, error: "mac_address is required" }, 400);
-    if (!message) return jsonResponse({ success: false, error: "message is required" }, 400);
-    if (message.length > 2000) return jsonResponse({ success: false, error: "message is too long" }, 400);
-    const { data: existingClient, error: clientSelectError } = await supabase.from("clients").select("id, mac_address, username").eq("mac_address", macAddress).maybeSingle();
-    if (clientSelectError) throw new Error(`Client lookup failed: ${clientSelectError.message}`);
-    let clientId: number;
-    if (!existingClient) {
-      const { data: newClient, error } = await supabase.from("clients").insert({ mac_address: macAddress, username, last_seen_at: new Date().toISOString() }).select("id").single();
-      if (error) throw new Error(`Client creation failed: ${error.message}`); clientId = newClient.id;
-    } else {
-      clientId = existingClient.id;
-      const { error } = await supabase.from("clients").update({ ...(username !== null ? { username } : {}), last_seen_at: new Date().toISOString() }).eq("id", clientId);
-      if (error) throw new Error(`Client update failed: ${error.message}`);
-    }
-    let conversationId: number | null = null; let conversationWasCreated = false;
-    if (requestedConversationId !== null) {
-      const { data, error } = await supabase.from("conversations").select("id").eq("id", requestedConversationId).eq("client_id", clientId).maybeSingle();
-      if (error) throw new Error(`Conversation validation failed: ${error.message}`); if (data) conversationId = data.id;
-    }
-    if (conversationId === null) {
-      const { data, error } = await supabase.from("conversations").select("id").eq("client_id", clientId).order("updated_at", { ascending: false }).order("created_at", { ascending: false }).limit(1).maybeSingle();
-      if (error) throw new Error(`Conversation lookup failed: ${error.message}`); if (data) conversationId = data.id;
-    }
-    if (conversationId === null) {
-      const { data, error } = await supabase.from("conversations").insert({ client_id: clientId, status: "open" }).select("id").single();
-      if (error) throw new Error(`Conversation creation failed: ${error.message}`); conversationId = data.id; conversationWasCreated = true;
-    }
-    const { count: previousClientMessages, error: countError } = await supabase.from("messages").select("id", { count: "exact", head: true }).eq("conversation_id", conversationId).eq("sender", "client");
-    if (countError) throw new Error(`Message history check failed: ${countError.message}`);
-    const isFirstClientMessage = (previousClientMessages ?? 0) === 0;
-    const { data: savedMessage, error: messageError } = await supabase.from("messages").insert({ conversation_id: conversationId, sender: "client", message, is_read: false }).select("*").single();
-    if (messageError) throw new Error(`Message creation failed: ${messageError.message}`);
-    const { error: updateError } = await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", conversationId);
-    if (updateError) throw new Error(`Conversation update failed: ${updateError.message}`);
-    let savedResponse = null;
-    if (isFirstClientMessage) {
-      const { data, error } = await supabase.from("messages").insert({ conversation_id: conversationId, sender: "admin", message: AUTO_REPLY, is_read: false }).select("*").single();
-      if (error) throw new Error(`Response creation failed: ${error.message}`); savedResponse = data;
-    }
-    return jsonResponse({ success: true, client_id: clientId, conversation_id: conversationId, conversation_created: conversationWasCreated, first_client_message: isFirstClientMessage, user_message: savedMessage, response: savedResponse });
-  } catch (error) { console.error("super-responder error:", error); return jsonResponse({ success: false, error: error instanceof Error ? error.message : "Internal Server Error" }, 500); }
-})};
+interface ChatPayload { mac_address?: string; username?: string; message?: string; conversation_id?: number | string | null; action?: string; network_number?: string | null; }
+const corsHeaders={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"GET, POST, OPTIONS","Cache-Control":"no-store"};
+const AUTO_REPLY="تم استلام رسالتك بنجاح. سيتم الرد عليك من الدعم.";
+function jsonResponse(payload:unknown,status=200){return new Response(JSON.stringify(payload),{status,headers:{...corsHeaders,"Content-Type":"application/json"}})}
+function normalizeConversationId(v:unknown){if(v===null||v===undefined||v==="")return null;const id=typeof v==="number"?v:Number(v);return Number.isSafeInteger(id)&&id>0?id:null}
+function normalizeMac(v:unknown){return typeof v==="string"?v.trim().toUpperCase():""}
+function validMac(v:string){return /^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(v)}
+function normalizeNetworkNumber(v:unknown){const n=typeof v==="string"?v.trim():"";return /^\d{4}$/.test(n)?n:"0001"}
+function getBearerToken(req:Request){const h=req.headers.get("Authorization")||"";const m=h.match(/^Bearer\s+(.+)$/i);return m?.[1]?.trim()||null}
+async function getNetworkByNumber(db:any,n:string){const {data,error}=await db.from("networks").select("id,network_number,name,status").eq("network_number",n).eq("status","active").maybeSingle();if(error)throw new Error(`Network lookup failed: ${error.message}`);return data}
+async function getAdminContext(db:any,userId:string){const {data,error}=await db.from("admin_users").select("id,network_id,networks!inner(network_number,name,status)").eq("auth_user_id",userId).maybeSingle();if(error)throw new Error(`Admin lookup failed: ${error.message}`);if(!data?.network_id||!data.networks||data.networks.status!=="active")return null;return {adminId:data.id,networkId:data.network_id,network:data.networks}}
+export default {fetch:withSupabase({auth:["publishable","secret"]},async(req,ctx)=>{if(req.method==="OPTIONS")return new Response("ok",{status:200,headers:corsHeaders});try{const supabase=ctx.supabase,db=ctx.supabaseAdmin,accessToken=getBearerToken(req);const {data:userData,error:userError}=accessToken?await supabase.auth.getUser(accessToken):{data:{user:null},error:new Error("Missing Authorization header")};const user=userData?.user;if(userError||!user?.id)return jsonResponse({success:false,error:"Unauthorized"},401);const url=new URL(req.url),queryAction=url.searchParams.get("action")||"health";
+if(queryAction==="health")return jsonResponse({success:true,service:"super-responder",status:"online"});
+if(queryAction==="bootstrap"){const mac=normalizeMac(url.searchParams.get("mac_address"));if(!mac||!validMac(mac))return jsonResponse({success:false,error:"MAC Address غير صحيح"},400);const networkNumber=normalizeNetworkNumber(url.searchParams.get("network_number"));const network=await getNetworkByNumber(db,networkNumber);if(!network)return jsonResponse({success:false,error:"Network not found"},404);const requested=normalizeConversationId(url.searchParams.get("conversation_id"));const {data:client,error:ce}=await db.from("clients").select("id,mac_address,username,auth_user_id").eq("network_id",network.id).eq("mac_address",mac).maybeSingle();if(ce)throw new Error(`Client lookup failed: ${ce.message}`);if(!client)return jsonResponse({success:true,client:null,conversation:null,messages:[]});if(client.auth_user_id&&client.auth_user_id!==user.id)return jsonResponse({success:false,error:"Client identity mismatch"},403);if(!client.auth_user_id){const {error:ue}=await db.from("clients").update({auth_user_id:user.id,last_seen_at:new Date().toISOString()}).eq("id",client.id).eq("network_id",network.id);if(ue)throw new Error(`Client update failed: ${ue.message}`)}else{await db.from("clients").update({last_seen_at:new Date().toISOString()}).eq("id",client.id).eq("network_id",network.id)}let conversation=null;if(requested){const {data:c,error:e}=await db.from("conversations").select("id,client_id,status,created_at,updated_at").eq("id",requested).eq("client_id",client.id).eq("network_id",network.id).maybeSingle();if(e)throw new Error(`Conversation validation failed: ${e.message}`);conversation=c}if(!conversation){const {data:c,error:e}=await db.from("conversations").select("id,client_id,status,created_at,updated_at").eq("client_id",client.id).eq("network_id",network.id).order("updated_at",{ascending:false}).order("created_at",{ascending:false}).limit(1).maybeSingle();if(e)throw new Error(`Conversation lookup failed: ${e.message}`);conversation=c}if(!conversation)return jsonResponse({success:true,client:{id:client.id,username:client.username},conversation:null,messages:[]});const {data:messages,error:me}=await db.from("messages").select("id,conversation_id,sender,message,created_at,is_read").eq("conversation_id",conversation.id).eq("network_id",network.id).order("created_at",{ascending:false}).limit(100);if(me)throw new Error(`Message history failed: ${me.message}`);return jsonResponse({success:true,client:{id:client.id,username:client.username},conversation,messages:(messages||[]).reverse()})}
+const admin=await getAdminContext(db,user.id);
+if(queryAction==="admin_base"){if(!admin)return jsonResponse({success:false,error:"Admin access denied"},403);const [{data:conversations,error:ce},{data:clients,error:cle}]=await Promise.all([db.from("conversations").select("id,client_id,status,created_at,updated_at").eq("network_id",admin.networkId).order("updated_at",{ascending:false}),db.from("clients").select("id,mac_address,username").eq("network_id",admin.networkId).order("created_at",{ascending:false})]);if(ce)throw new Error(ce.message);if(cle)throw new Error(cle.message);return jsonResponse({success:true,network:admin.network,conversations:conversations||[],clients:clients||[]})}
+if(queryAction==="admin_messages"){if(!admin)return jsonResponse({success:false,error:"Admin access denied"},403);const id=normalizeConversationId(url.searchParams.get("conversation_id"));if(!id)return jsonResponse({success:false,error:"conversation_id is required"},400);const {data:conversation,error:ce}=await db.from("conversations").select("id,client_id,status,created_at,updated_at").eq("id",id).eq("network_id",admin.networkId).maybeSingle();if(ce)throw new Error(ce.message);if(!conversation)return jsonResponse({success:false,error:"Conversation not found"},404);const {data:messages,error:me}=await db.from("messages").select("id,conversation_id,sender,message,created_at,is_read").eq("conversation_id",id).eq("network_id",admin.networkId).order("created_at",{ascending:false}).limit(100);if(me)throw new Error(me.message);return jsonResponse({success:true,conversation,messages:(messages||[]).reverse()})}
+if(req.method!=="POST")return jsonResponse({success:false,error:"Method not allowed"},405);const body:ChatPayload=await req.json();const action=body.action||"client_message";
+if(action==="admin_reply"){if(!admin)return jsonResponse({success:false,error:"Admin access denied"},403);const id=normalizeConversationId(body.conversation_id),message=body.message?.trim()||"";if(!id||!message)return jsonResponse({success:false,error:"conversation_id and message are required"},400);if(message.length>2000)return jsonResponse({success:false,error:"message is too long"},400);const {data:conversation,error:ce}=await db.from("conversations").select("id,client_id").eq("id",id).eq("network_id",admin.networkId).maybeSingle();if(ce)throw new Error(ce.message);if(!conversation)return jsonResponse({success:false,error:"Conversation not found"},404);const {data:savedMessage,error:me}=await db.from("messages").insert({conversation_id:id,network_id:admin.networkId,sender:"admin",message,is_read:false}).select("*").single();if(me)throw new Error(me.message);await db.from("conversations").update({updated_at:new Date().toISOString()}).eq("id",id).eq("network_id",admin.networkId);return jsonResponse({success:true,message:savedMessage})}
+if(action==="admin_new_conversation"){if(!admin)return jsonResponse({success:false,error:"Admin access denied"},403);const mac=normalizeMac(body.mac_address);if(!validMac(mac))return jsonResponse({success:false,error:"MAC Address غير صحيح"},400);const {data:existing,error:ee}=await db.from("clients").select("id,mac_address,username").eq("network_id",admin.networkId).eq("mac_address",mac).maybeSingle();if(ee)throw new Error(ee.message);let clientId=existing?.id;if(!clientId){const {data:c,error:ce}=await db.from("clients").insert({network_id:admin.networkId,mac_address:mac,last_seen_at:new Date().toISOString()}).select("id,mac_address,username").single();if(ce)throw new Error(ce.message);clientId=c.id}const {data:old,error:oe}=await db.from("conversations").select("id,client_id,status,created_at,updated_at").eq("network_id",admin.networkId).eq("client_id",clientId).order("updated_at",{ascending:false}).limit(1).maybeSingle();if(oe)throw new Error(oe.message);if(old)return jsonResponse({success:true,conversation:old,existing:true});const {data:conversation,error:ce}=await db.from("conversations").insert({network_id:admin.networkId,client_id:clientId,status:"open"}).select("id,client_id,status,created_at,updated_at").single();if(ce)throw new Error(ce.message);return jsonResponse({success:true,conversation,existing:false})}
+if(action!=="client_message")return jsonResponse({success:false,error:"Unknown action"},400);
+const mac=normalizeMac(body.mac_address),username=body.username?.trim()||null,message=body.message?.trim()||"",requested=normalizeConversationId(body.conversation_id),networkNumber=normalizeNetworkNumber(body.network_number);if(!mac)return jsonResponse({success:false,error:"mac_address is required"},400);if(!validMac(mac))return jsonResponse({success:false,error:"MAC Address غير صحيح"},400);if(!message)return jsonResponse({success:false,error:"message is required"},400);if(message.length>2000)return jsonResponse({success:false,error:"message is too long"},400);const network=await getNetworkByNumber(db,networkNumber);if(!network)return jsonResponse({success:false,error:"Network not found"},404);const {data:existing,error:ee}=await db.from("clients").select("id,mac_address,username,auth_user_id,network_id").eq("network_id",network.id).eq("mac_address",mac).maybeSingle();if(ee)throw new Error(ee.message);let clientId:number;const networkId:number=network.id;if(!existing){const {data:c,error:ce}=await db.from("clients").insert({mac_address:mac,username,network_id:networkId,auth_user_id:user.id,last_seen_at:new Date().toISOString()}).select("id").single();if(ce)throw new Error(ce.message);clientId=c.id}else{if(existing.auth_user_id&&existing.auth_user_id!==user.id)return jsonResponse({success:false,error:"Client identity mismatch"},403);clientId=existing.id;const {error:ue}=await db.from("clients").update({...(username!==null?{username}:{}),auth_user_id:user.id,last_seen_at:new Date().toISOString()}).eq("id",clientId).eq("network_id",networkId);if(ue)throw new Error(`Client update failed: ${ue.message}`)}let conversationId:number|null=null;if(requested){const {data:c,error:e}=await db.from("conversations").select("id").eq("id",requested).eq("client_id",clientId).eq("network_id",networkId).maybeSingle();if(e)throw new Error(e.message);if(c)conversationId=c.id}if(!conversationId){const {data:c,error:e}=await db.from("conversations").select("id").eq("client_id",clientId).eq("network_id",networkId).order("updated_at",{ascending:false}).limit(1).maybeSingle();if(e)throw new Error(e.message);if(c)conversationId=c.id}let created=false;if(!conversationId){const {data:c,error:e}=await db.from("conversations").insert({network_id:networkId,client_id:clientId,status:"open"}).select("id").single();if(e)throw new Error(e.message);conversationId=c.id;created=true}const {count,error:countErr}=await db.from("messages").select("id",{count:"exact",head:true}).eq("conversation_id",conversationId).eq("network_id",networkId).eq("sender","client");if(countErr)throw new Error(countErr.message);const first=(count??0)===0;const {data:saved,error:se}=await db.from("messages").insert({conversation_id:conversationId,network_id:networkId,sender:"client",message,is_read:false}).select("*").single();if(se)throw new Error(se.message);await db.from("conversations").update({updated_at:new Date().toISOString()}).eq("id",conversationId).eq("network_id",networkId);let response=null;if(first){const {data:r,error:re}=await db.from("messages").insert({conversation_id:conversationId,network_id:networkId,sender:"admin",message:AUTO_REPLY,is_read:false}).select("*").single();if(re)throw new Error(re.message);response=r}return jsonResponse({success:true,client_id:clientId,conversation_id:conversationId,conversation_created:created,first_client_message:first,user_message:saved,response})
+}catch(error){console.error(error);return jsonResponse({success:false,error:error instanceof Error?error.message:"Internal Server Error"},500)}})};
