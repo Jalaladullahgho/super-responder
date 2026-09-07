@@ -1,0 +1,33 @@
+name: temporary-network-number-edit
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  edit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update only the support URL
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8-sig')
+          old = """frame.src =\n        'https://super-responder.vercel.app/?mac_address=' +\n        encodeURIComponent(mac);"""
+          new = """frame.src =\n        'https://super-responder.vercel.app/?mac_address=' +\n        encodeURIComponent(mac) +\n        '&network_number=0001';"""
+          if s.count(old) != 1:
+              raise SystemExit(f'Expected exactly 1 target block, found {s.count(old)}')
+          p.write_text(s.replace(old, new), encoding='utf-8')
+          PY
+          git diff -- index.html
+          git diff --exit-code -- . ':(exclude)index.html' || true
+      - name: Commit change and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git rm .github/workflows/temporary-network-number-edit.yml
+          git commit -m "Append network number to support chat URL"
+          git push
