@@ -2,9 +2,11 @@ const SUPABASE_FUNCTION_URL = "https://quylfcqnzubxedlatzpv.supabase.co/function
 const SUPABASE_URL = "https://quylfcqnzubxedlatzpv.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_9Nl91eoKWdraNH_kw2cCIg_GHRn-IJJ";
 const AUTH_STORAGE_KEY = "super_responder_anonymous_session_v1";
+const NETWORK_STORAGE_KEY = "super_responder_network_number_v1";
 
 const params = new URLSearchParams(window.location.search);
 const macAddress = (params.get("mac_address") || "").trim();
+const networkNumber = (params.get("network_number") || "0001").trim();
 
 let currentConversationId = null;
 let session = null;
@@ -63,6 +65,7 @@ function saveSession(value) {
   session = value;
   try {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(value));
+    localStorage.setItem(NETWORK_STORAGE_KEY, networkNumber);
   } catch {}
 }
 
@@ -105,10 +108,19 @@ async function createAnonymousSession() {
 }
 
 async function ensureAnonymousSession() {
+  try {
+    const storedNetwork = localStorage.getItem(NETWORK_STORAGE_KEY);
+    if (storedNetwork && storedNetwork !== networkNumber) {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.removeItem(NETWORK_STORAGE_KEY);
+    }
+  } catch {}
+
   const stored = loadStoredSession();
   if (stored?.access_token) {
     if (sessionStillValid(stored)) {
       session = stored;
+      try { localStorage.setItem(NETWORK_STORAGE_KEY, networkNumber); } catch {}
       authReady = true;
       return session;
     }
@@ -128,7 +140,7 @@ async function ensureAnonymousSession() {
   return session;
 }
 
-async function authHeaders(extra = {}, allowRetry = true) {
+async function authHeaders(extra = {}) {
   if (!authReady || !session?.access_token) throw new Error("جلسة المصادقة غير موجودة");
   if (!sessionStillValid(session) && session?.refresh_token) {
     await refreshSession(session.refresh_token);
@@ -200,18 +212,13 @@ function renderInitialMessages(messagesEl, data) {
 }
 
 function mergeMessages(messagesEl, data) {
-  const serverIds = new Set(data.map(item => String(item?.id)).filter(id => id !== "undefined"));
-
   [...messagesEl.querySelectorAll('[data-optimistic="true"]')].forEach(el => {
     const bubbleText = el.querySelector(".bubble")?.textContent || "";
     const exists = data.some(item => item?.sender === "client" && bubbleText.startsWith(String(item.message || "")));
     if (exists) el.remove();
   });
 
-  data.slice(-20).forEach(item => {
-    if (!serverIds.has(String(item?.id))) return;
-    appendMessage(messagesEl, item);
-  });
+  data.slice(-20).forEach(item => appendMessage(messagesEl, item));
 
   if (data.length) messagesEl.scrollTop = messagesEl.scrollHeight;
 }
@@ -219,7 +226,11 @@ function mergeMessages(messagesEl, data) {
 async function bootstrapConversation() {
   if (!macAddress || !authReady) return null;
 
-  const query = new URLSearchParams({ action: "bootstrap", mac_address: macAddress });
+  const query = new URLSearchParams({
+    action: "bootstrap",
+    mac_address: macAddress,
+    network_number: networkNumber
+  });
   if (currentConversationId) query.set("conversation_id", String(currentConversationId));
 
   const response = await requestFunction(`${SUPABASE_FUNCTION_URL}?${query.toString()}`);
@@ -235,7 +246,9 @@ async function sendMessage(message) {
   const response = await requestFunction(SUPABASE_FUNCTION_URL, {
     method: "POST",
     body: JSON.stringify({
+      action: "client_message",
       mac_address: macAddress,
+      network_number: networkNumber,
       message,
       conversation_id: currentConversationId
     })
@@ -287,7 +300,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  // The input remains usable while authentication initializes.
   form.addEventListener("submit", async event => {
     event.preventDefault();
     event.stopPropagation();
