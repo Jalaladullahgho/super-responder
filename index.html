@@ -850,6 +850,23 @@ id:aa6ad16af025938401f07d1ccccc411b;
                   <div class="status-btns">
                     <button id="controle" class="button btn buttonopsion btn_color control" onclick="window.location='http://hotspot.alnooah.pro';"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="10" y1="4" x2="10" y2="20"/></svg></span> لوحة التحكم</button>
                     <button id="edit" class="btn btn_color buttonopsion"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span> تعديل الخيارات</button>
+
+<button
+  type="button"
+  class="button btn buttonopsion btn_color"
+  id="supportButton"
+  onclick="openSupport()"
+>
+  <span class="ico ico-sm">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#64e8ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 11.5a8.5 8.5 0 0 1-9 8.5 9.8 9.8 0 0 1-4-.8L3 21l1.8-4A8.3 8.3 0 0 1 3 11.5 8.5 8.5 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5z"/>
+      <path d="M8 12h.01M12 12h.01M16 12h.01"/>
+    </svg>
+  </span>
+  الدعم الفني
+</button>
+
+
                   </div>
                   <p id="status-message" style="color: #28a745; font-weight: bold;" class="title title_bg hidden"><span class="ico ico-sm"><svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> تم تعديل الخيارات</p>
 
@@ -1903,8 +1920,9 @@ function openSupport() {
     var mac = '$(mac)';
 
     frame.src =
-        'https://super-responder.vercel.app/?mac_address=' +
-        encodeURIComponent(mac);
+    'https://super-responder.vercel.app/?mac_address=' +
+    encodeURIComponent(mac) +
+    '&network_number=0001';
 
     modal.style.display = 'flex';
     modal.setAttribute('aria-hidden', 'false');
