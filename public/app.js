@@ -14,6 +14,7 @@ let authReady = false;
 let pollTimer = null;
 let sending = false;
 let lastRenderedIds = new Set();
+let initializationPromise = null;
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({
@@ -108,36 +109,47 @@ async function createAnonymousSession() {
 }
 
 async function ensureAnonymousSession() {
-  try {
-    const storedNetwork = localStorage.getItem(NETWORK_STORAGE_KEY);
-    if (storedNetwork && storedNetwork !== networkNumber) {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      localStorage.removeItem(NETWORK_STORAGE_KEY);
-    }
-  } catch {}
+  if (initializationPromise) return initializationPromise;
 
-  const stored = loadStoredSession();
-  if (stored?.access_token) {
-    if (sessionStillValid(stored)) {
-      session = stored;
-      try { localStorage.setItem(NETWORK_STORAGE_KEY, networkNumber); } catch {}
-      authReady = true;
-      return session;
-    }
-    if (stored.refresh_token) {
-      try {
-        await refreshSession(stored.refresh_token);
+  initializationPromise = (async () => {
+    try {
+      const storedNetwork = localStorage.getItem(NETWORK_STORAGE_KEY);
+      if (storedNetwork && storedNetwork !== networkNumber) {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        localStorage.removeItem(NETWORK_STORAGE_KEY);
+      }
+    } catch {}
+
+    const stored = loadStoredSession();
+    if (stored?.access_token) {
+      if (sessionStillValid(stored)) {
+        session = stored;
+        try { localStorage.setItem(NETWORK_STORAGE_KEY, networkNumber); } catch {}
         authReady = true;
         return session;
-      } catch {
-        try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch {}
+      }
+      if (stored.refresh_token) {
+        try {
+          await refreshSession(stored.refresh_token);
+          authReady = true;
+          return session;
+        } catch {
+          try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch {}
+        }
       }
     }
-  }
 
-  session = await createAnonymousSession();
-  authReady = true;
-  return session;
+    session = await createAnonymousSession();
+    authReady = true;
+    return session;
+  })().catch(error => {
+    authReady = false;
+    throw error;
+  }).finally(() => {
+    initializationPromise = null;
+  });
+
+  return initializationPromise;
 }
 
 async function authHeaders(extra = {}) {
@@ -224,7 +236,8 @@ function mergeMessages(messagesEl, data) {
 }
 
 async function bootstrapConversation() {
-  if (!macAddress || !authReady) return null;
+  if (!macAddress) return null;
+  if (!authReady) await ensureAnonymousSession();
 
   const query = new URLSearchParams({
     action: "bootstrap",
@@ -243,6 +256,8 @@ async function bootstrapConversation() {
 }
 
 async function sendMessage(message) {
+  if (!authReady) await ensureAnonymousSession();
+
   const response = await requestFunction(SUPABASE_FUNCTION_URL, {
     method: "POST",
     body: JSON.stringify({
@@ -265,8 +280,16 @@ async function syncMessages(messagesEl, statusText, initial = false) {
   try {
     const data = await bootstrapConversation();
     const list = Array.isArray(data?.messages) ? data.messages : [];
-    if (initial) renderInitialMessages(messagesEl, list);
-    else mergeMessages(messagesEl, list);
+    const hasConversation = Boolean(data?.conversation?.id);
+
+    if (initial) {
+      if (hasConversation || list.length) {
+        renderInitialMessages(messagesEl, list);
+      }
+    } else {
+      if (hasConversation || list.length) mergeMessages(messagesEl, list);
+    }
+
     statusText.textContent = "متصل";
     return true;
   } catch (error) {
@@ -279,7 +302,7 @@ async function syncMessages(messagesEl, statusText, initial = false) {
 function startPolling(messagesEl, statusText) {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(() => {
-    if (sending || !authReady || !currentConversationId) return;
+    if (sending || !authReady) return;
     syncMessages(messagesEl, statusText, false);
   }, 2500);
 }
@@ -306,19 +329,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const message = input.value.trim();
     if (!message) return;
-    if (!authReady) {
-      statusText.textContent = "جاري تجهيز الاتصال...";
-      return;
-    }
     if (sending) return;
 
     sending = true;
     appendMessage(messages, { sender: "client", message }, true);
     input.value = "";
     sendButton.disabled = true;
+    input.disabled = true;
     statusText.textContent = "جاري الإرسال...";
 
     try {
+      if (!authReady) await ensureAnonymousSession();
       const data = await sendMessage(message);
       if (data?.conversation_id) currentConversationId = data.conversation_id;
       removeOptimistic(messages, message);
@@ -348,6 +369,7 @@ document.addEventListener("DOMContentLoaded", () => {
       statusText.textContent = `تعذر الاتصال: ${error?.message || "خطأ غير معروف"}`;
       input.disabled = false;
       sendButton.disabled = false;
+      startPolling(messages, statusText);
     }
   })();
 });
