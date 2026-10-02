@@ -26,6 +26,35 @@ function formatTime(value) {
   }
 }
 
+function linkifyMessage(value) {
+  let html = escapeHtml(value);
+
+  // روابط الويب: افتحها مباشرة في نافذة/تبويب جديد.
+  html = html.replace(
+    /(^|[\s(])((?:https?:\\/\\/|www\\.)[^\s<]+)/gi,
+    (match, prefix, url) => {
+      const cleanUrl = url.replace(/[.,،؛:!?؟)]+$/g, "");
+      const href = /^https?:\\/\\//i.test(cleanUrl) ? cleanUrl : "https://" + cleanUrl;
+      const trailing = url.slice(cleanUrl.length);
+      return prefix + '<a href="' + href + '" target="_blank" rel="noopener noreferrer">' + cleanUrl + "</a>" + trailing;
+    }
+  );
+
+  // رابط صفحة الشبكة المختصر.
+  html = html.replace(
+    /(^|[\s(])w\.com(?=$|[\s),،؛:!?؟])/gi,
+    (match, prefix) => prefix + '<a href="https://w.com" target="_blank" rel="noopener noreferrer">w.com</a>'
+  );
+
+  // أرقام المحافظ الإلكترونية الخاصة بشبكة واي ماكس.
+  html = html.replace(
+    /(^|[^\d])(24237|1489)(?!\d)/g,
+    (match, prefix, number) => prefix + '<a href="tel:' + number + '">' + number + "</a>"
+  );
+
+  return html.replace(/\n/g, "<br>");
+}
+
 async function requestFunction(url, options = {}) {
   const headers = new Headers(options.headers || {});
   headers.set("apikey", SUPABASE_PUBLISHABLE_KEY);
@@ -56,7 +85,7 @@ function appendMessage(messagesEl, item, optimistic = false) {
 
   const bubble = document.createElement("div");
   bubble.className = "bubble";
-  bubble.innerHTML = escapeHtml(item?.message).replace(/\n/g, "<br>");
+  bubble.innerHTML = linkifyMessage(item?.message);
 
   if (item?.created_at) {
     const time = document.createElement("div");
