@@ -108,7 +108,9 @@ function removeOptimistic(messagesEl, text) {
 }
 
 function renderInitialMessages(messagesEl, data) {
+  const staticNodes = [...messagesEl.children].filter(el => el.dataset.staticWelcome === "true");
   messagesEl.innerHTML = "";
+  staticNodes.forEach(el => messagesEl.appendChild(el));
   lastRenderedIds = new Set();
   data.slice(-20).forEach(item => appendMessage(messagesEl, item));
   messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -157,6 +159,11 @@ async function syncMessages(messagesEl, statusText, initial = false) {
 
     const list = Array.isArray(data?.messages) ? data.messages : [];
     const hasConversation = Boolean(data?.conversation?.id);
+
+    const serviceBubble = document.getElementById("service-info-bubble");
+    if (serviceBubble && data?.service_message) {
+      serviceBubble.innerHTML = linkifyMessage(data.service_message);
+    }
 
     if (initial) {
       if (hasConversation || list.length) renderInitialMessages(messagesEl, list);
