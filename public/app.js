@@ -31,10 +31,10 @@ function linkifyMessage(value) {
 
   // روابط الويب: افتحها مباشرة في نافذة/تبويب جديد.
   html = html.replace(
-    /(^|[\s(])((?:https?:\\/\\/|www\\.)[^\s<]+)/gi,
+    /(^|[\s(])((?:https?:[/][/]|www[.])[^\s<]+)/gi,
     (match, prefix, url) => {
       const cleanUrl = url.replace(/[.,،؛:!?؟)]+$/g, "");
-      const href = /^https?:\\/\\//i.test(cleanUrl) ? cleanUrl : "https://" + cleanUrl;
+      const href = /^https?:[/][/]/i.test(cleanUrl) ? cleanUrl : "https://" + cleanUrl;
       const trailing = url.slice(cleanUrl.length);
       return prefix + '<a href="' + href + '" target="_blank" rel="noopener noreferrer">' + cleanUrl + "</a>" + trailing;
     }
