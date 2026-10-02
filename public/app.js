@@ -68,10 +68,13 @@ async function requestFunction(url, options = {}) {
 }
 
 function trimMessages(messagesEl) {
-  while (messagesEl.children.length > 20) messagesEl.firstElementChild?.remove();
+  const dynamicMessages = [...messagesEl.children].filter(el => el.dataset.staticWelcome !== "true");
+  while (dynamicMessages.length > 20) {
+    dynamicMessages.shift()?.remove();
+  }
 }
 
-function appendMessage(messagesEl, item, optimistic = false) {
+function appendMessage(messagesEl, item, optimistic = false, autoScroll = true) {
   if (!optimistic && item?.id != null && lastRenderedIds.has(String(item.id))) return;
 
   const wrapper = document.createElement("div");
@@ -97,7 +100,7 @@ function appendMessage(messagesEl, item, optimistic = false) {
   wrapper.appendChild(bubble);
   messagesEl.appendChild(wrapper);
   trimMessages(messagesEl);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+  if (autoScroll) messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
 function removeOptimistic(messagesEl, text) {
@@ -112,19 +115,28 @@ function renderInitialMessages(messagesEl, data) {
   messagesEl.innerHTML = "";
   staticNodes.forEach(el => messagesEl.appendChild(el));
   lastRenderedIds = new Set();
-  data.slice(-20).forEach(item => appendMessage(messagesEl, item));
+  data.slice(-20).forEach(item => appendMessage(messagesEl, item, false, false));
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
+function isNearBottom(messagesEl, threshold = 80) {
+  return messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight <= threshold;
+}
+
 function mergeMessages(messagesEl, data) {
+  const shouldFollowBottom = isNearBottom(messagesEl);
+
   [...messagesEl.querySelectorAll('[data-optimistic="true"]')].forEach(el => {
     const bubbleText = el.querySelector(".bubble")?.textContent || "";
     const exists = data.some(item => item?.sender === "client" && bubbleText.startsWith(String(item.message || "")));
     if (exists) el.remove();
   });
 
-  data.slice(-20).forEach(item => appendMessage(messagesEl, item));
-  if (data.length) messagesEl.scrollTop = messagesEl.scrollHeight;
+  data.slice(-20).forEach(item => appendMessage(messagesEl, item, false, false));
+
+  if (shouldFollowBottom && data.length) {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
 }
 
 async function bootstrapConversation() {
