@@ -48,7 +48,7 @@ form.addEventListener('submit',async e=>{
   if(!/^\d{4}$/.test(network)){show('رقم الشبكة يجب أن يتكون من 4 أرقام');return}
   if(!password){show('أدخل كلمة المرور');return}
   btn.disabled=true;show('جاري التحقق...',true);
-  try{await login(network,password);show('تم الدخول...',true);location.replace('admin-support.html')}catch(err){show(err.message||'فشل تسجيل الدخول')}finally{btn.disabled=false}
+  try{await login(network,password);show('تم الدخول...',true);const next=new URLSearchParams(location.search).get('next');location.replace(next==='interfaces.html'?'interfaces.html':'admin-support.html')}catch(err){show(err.message||'فشل تسجيل الدخول')}finally{btn.disabled=false}
 });
 </script>
 </body>
