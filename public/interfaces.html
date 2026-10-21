@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827">
+<title>مراقبة واجهات الميكروتك | واي ماكس</title>
+<style>
+:root{color-scheme:light;--ink:#172033;--muted:#687386;--line:#e4e9f0;--panel:#fff;--bg:#f4f6fa;--navy:#111827;--blue:#2563eb;--blue-soft:#edf4ff;--green:#11845b;--green-soft:#e9f8f0;--amber:#9a6400;--amber-soft:#fff5dc;--red:#b42318;--shadow:0 8px 28px rgba(20,34,60,.055}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Tahoma,Arial,sans-serif;font-size:14px;line-height:1.55}
+button,a{font:inherit}a{color:inherit;text-decoration:none}.topbar{background:var(--navy);color:#fff;padding:0 24px;min-height:76px;display:flex;align-items:center;justify-content:space-between;gap:18px}.brand{display:flex;align-items:center;gap:12px}.brandmark{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(145deg,#4f7df3,#6947d7);font-size:21px;font-weight:700;box-shadow:0 5px 16px #536eea44}.brandname{font-size:17px;font-weight:700}.brandmeta{font-size:12px;color:#c1c9d7;margin-top:2px}.top-actions{display:flex;align-items:center;gap:10px}.toplink{border:1px solid #3e485b;border-radius:10px;padding:9px 13px;color:#e6eaf2;font-size:12px}.toplink:hover{background:#202b3f}
+.wrap{width:min(1460px,100%);margin:auto;padding:26px 24px 40px}.pageheading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px}.eyebrow{color:var(--blue);font-size:12px;font-weight:700;margin-bottom:5px}.pageheading h1{margin:0;font-size:25px;letter-spacing:-.3px}.pageheading p{margin:7px 0 0;color:var(--muted);font-size:13px}.report-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.interval-pill,.refresh-pill{display:flex;align-items:center;gap:8px;border-radius:11px;padding:10px 13px;font-size:12px;font-weight:700;white-space:nowrap}.interval-pill{background:var(--blue-soft);color:#1d4ed8}.refresh-pill{background:#fff;border:1px solid var(--line);color:#4b5565}
+.alert{display:flex;align-items:flex-start;gap:13px;border:1px solid #f0d79c;background:var(--amber-soft);border-radius:14px;padding:15px 17px;margin-bottom:20px}.alert-icon{width:30px;height:30px;flex:0 0 30px;border-radius:9px;display:grid;place-items:center;background:#ffebbc;color:var(--amber);font-size:17px;font-weight:700}.alert strong{display:block;font-size:13px;color:#714b00;margin-bottom:3px}.alert p{margin:0;color:#79591a;font-size:12px}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin-bottom:20px}.metric{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow);min-width:0}.metrichead{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;font-weight:700}.metricicon{height:35px;width:35px;border-radius:11px;display:grid;place-items:center;font-size:17px;background:#f0f3fa}.metricvalue{font-size:25px;font-weight:800;letter-spacing:-.7px;margin-top:15px;min-height:38px}.metricfoot{color:#8a93a3;font-size:11px;margin-top:4px}.metricvalue.placeholder{color:#a2aab8;letter-spacing:2px}
+.content-panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}.panel-head{padding:19px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:1px solid var(--line)}.panel-title{font-size:16px;font-weight:800}.panel-subtitle{font-size:12px;color:var(--muted);margin-top:3px}.panel-badge{display:flex;gap:7px;align-items:center;color:var(--muted);font-size:11px;white-space:nowrap}.dot{height:7px;width:7px;border-radius:50%;background:#c19a3d}
+.table-wrap{width:100%;overflow:auto}table{border-collapse:collapse;width:100%;min-width:1020px;text-align:right}thead{background:#f8f9fc}th{font-size:11px;font-weight:700;color:#667085;padding:14px 17px;white-space:nowrap;border-bottom:1px solid var(--line)}td{padding:15px 17px;border-bottom:1px solid #eef1f5;font-size:12px;color:#465166;white-space:nowrap}tbody tr:last-child td{border-bottom:0}.empty-row td{padding:0;white-space:normal}.empty-state{min-height:255px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:28px;color:var(--muted)}.empty-graphic{width:62px;height:62px;border-radius:19px;display:grid;place-items:center;background:#f0f4ff;color:#5475db;font-size:27px;margin-bottom:15px}.empty-state strong{font-size:14px;color:#344054;margin-bottom:5px}.empty-state p{max-width:450px;margin:0;font-size:12px;line-height:1.9}.status{display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:5px 9px;font-size:11px;font-weight:700}.status.waiting{background:#fff4d8;color:#8a5b00}.status.up{background:var(--green-soft);color:var(--green)}.status.down{background:#fff0ef;color:var(--red)}.interface-name{font-weight:800;color:#243044;direction:ltr;display:inline-block}.unit{color:#7d8798;font-size:10px}
+.note-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:15px;margin-top:18px}.note-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:17px 19px}.note-card h3{font-size:13px;margin:0 0 7px}.note-card p{font-size:12px;color:var(--muted);margin:0;line-height:1.9}.note-label{display:inline-block;font-size:10px;color:#1d4ed8;background:var(--blue-soft);padding:4px 8px;border-radius:7px;margin-bottom:8px}
+.footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:#9199a8;font-size:11px;margin-top:18px;padding:0 3px}
+@media(max-width:1050px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.note-grid{grid-template-columns:1fr}.pageheading{flex-direction:column}.report-controls{width:100%}}
+@media(max-width:600px){.topbar{padding:12px 15px;min-height:70px}.brandmark{width:38px;height:38px}.brandname{font-size:14px}.brandmeta{font-size:10px}.toplink{padding:8px;font-size:11px}.wrap{padding:20px 13px 30px}.pageheading h1{font-size:21px}.cards{gap:9px}.metric{padding:13px;border-radius:13px}.metrichead{font-size:11px}.metricicon{width:30px;height:30px}.metricvalue{font-size:21px;margin-top:12px}.metricfoot{font-size:10px}.interval-pill,.refresh-pill{padding:9px 10px}.panel-head{padding:15px}.panel-title{font-size:14px}.footer{font-size:10px}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="brandmark" aria-hidden="true">W</div>
+    <div><div class="brandname">واي ماكس نت</div><div class="brandmeta">إدارة الشبكة ومراقبة التشغيل</div></div>
+  </div>
+  <div class="top-actions">
+    <a class="toplink" href="admin-support.html">العودة إلى الدعم الفني ↗</a>
+  </div>
+</header>
+<main class="wrap">
+  <section class="pageheading">
+    <div>
+      <div class="eyebrow">NETWORK OPERATIONS</div>
+      <h1>تقرير واجهات الميكروتك</h1>
+      <p>ملخص حالة الواجهات، مدة تشغيل الراوتر، وحركة البيانات الواردة والصادرة.</p>
+    </div>
+    <div class="report-controls">
+      <div class="interval-pill"><span aria-hidden="true">◷</span> إرسال تقرير جديد كل ساعة</div>
+      <div class="refresh-pill"><span aria-hidden="true">↻</span> <span id="lastRefresh">لم يصل أول تقرير</span></div>
+    </div>
+  </section>
+
+  <section class="alert" id="connectionNotice" role="status">
+    <div class="alert-icon" aria-hidden="true">!</div>
+    <div><strong>بانتظار ربط الميكروتك</strong><p>التصميم جاهز، لكن لم يتم توصيل مصدر البيانات بعد. لن تظهر أرقام افتراضية حتى لا تختلط بيانات المثال بالإحصاءات الفعلية.</p></div>
+  </section>
+
+  <section class="cards" aria-label="ملخص الراوتر">
+    <article class="metric">
+      <div class="metrichead"><span>مدة تشغيل الراوتر</span><span class="metricicon" aria-hidden="true">◴</span></div>
+      <div class="metricvalue placeholder" id="routerUptime">— —</div>
+      <div class="metricfoot">منذ آخر إعادة تشغيل للنظام</div>
+    </article>
+    <article class="metric">
+      <div class="metrichead"><span>إجمالي الواجهات</span><span class="metricicon" aria-hidden="true">▤</span></div>
+      <div class="metricvalue placeholder" id="interfacesTotal">—</div>
+      <div class="metricfoot">حسب آخر تقرير مستلم</div>
+    </article>
+    <article class="metric">
+      <div class="metrichead"><span>واجهات تعمل</span><span class="metricicon" aria-hidden="true">●</span></div>
+      <div class="metricvalue placeholder" id="interfacesUp">—</div>
+      <div class="metricfoot">الواجهات النشطة وقت أخذ القراءة</div>
+    </article>
+    <article class="metric">
+      <div class="metrichead"><span>آخر تقرير مستلم</span><span class="metricicon" aria-hidden="true">◷</span></div>
+      <div class="metricvalue placeholder" id="reportTime" style="font-size:19px">—</div>
+      <div class="metricfoot" id="reportAge">سيظهر الوقت بعد الربط</div>
+    </article>
+  </section>
+
+  <section class="content-panel">
+    <div class="panel-head">
+      <div><div class="panel-title">تفاصيل الواجهات</div><div class="panel-subtitle">إجمالي RX/TX ومدة اتصال كل واجهة، إضافة إلى الاستهلاك المسجل خلال اليوم.</div></div>
+      <div class="panel-badge"><span class="dot"></span><span id="tableStatus">لا توجد بيانات مباشرة حتى الآن</span></div>
+    </div>
+    <div class="table-wrap">
+      <table aria-label="تفاصيل واجهات الميكروتك">
+        <thead><tr>
+          <th>اسم الواجهة</th><th>النوع</th><th>الحالة</th><th>مدة اتصال الواجهة</th>
+          <th>التنزيل RX</th><th>الرفع TX</th><th>تنزيل اليوم</th><th>رفع اليوم</th><th>آخر تغير للحالة</th>
+        </tr></thead>
+        <tbody id="interfaceRows">
+          <tr class="empty-row"><td colspan="9"><div class="empty-state">
+            <div class="empty-graphic" aria-hidden="true">⌁</div>
+            <strong>لم تصل بيانات من الميكروتك بعد</strong>
+            <p>بعد إعداد سكربت الإرسال وجدولة التقرير كل ساعة، ستظهر هنا الواجهات الفعلية مع حالتها ومدد اتصالها وعدادات التنزيل والرفع. يبدأ حساب الاستهلاك اليومي من أول قراءة محفوظة.</p>
+          </div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="note-grid">
+    <article class="note-card"><span class="note-label">طريقة الاتصال</span><h3>إرسال آمن من الراوتر إلى التقرير</h3><p>سيُرسل الميكروتك ملخص الواجهات إلى الخادم عبر HTTPS مرة كل ساعة. لا يحتاج التصميم إلى فتح منفذ إدارة API للراوتر على الإنترنت.</p></article>
+    <article class="note-card"><span class="note-label">دقة القراءات</span><h3>العدادات التراكمية والاستهلاك اليومي</h3><p>إجمالي RX/TX مأخوذ من عدادات الواجهة. أما استهلاك اليوم فيُحسب من الفرق بين القراءات المحفوظة، مع معالجة إعادة التشغيل أو تصفير العدادات.</p></article>
+  </section>
+  <footer class="footer"><span>واي ماكس نت · لوحة مراقبة الشبكة</span><span>تحديث البيانات المخطط: كل 60 دقيقة</span></footer>
+</main>
+<script>
+(function(){
+  "use strict";
+  const key = "super_responder_admin_session_v1";
+  try {
+    const s = JSON.parse(localStorage.getItem(key) || "null");
+    if (!s || !s.access_token) {
+      location.replace("admin-login.html");
+      return;
+    }
+  } catch (_) {
+    location.replace("admin-login.html");
+  }
+})();
+</script>
+</body>
+</html>
