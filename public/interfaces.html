@@ -106,11 +106,11 @@ button,a{font:inherit}a{color:inherit;text-decoration:none}.topbar{background:va
   try {
     const s = JSON.parse(localStorage.getItem(key) || "null");
     if (!s || !s.access_token) {
-      location.replace("admin-login.html");
+      location.replace("admin-login.html?next=interfaces.html");
       return;
     }
   } catch (_) {
-    location.replace("admin-login.html");
+    location.replace("admin-login.html?next=interfaces.html");
   }
 })();
 </script>
