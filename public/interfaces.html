@@ -102,16 +102,78 @@ button,a{font:inherit}a{color:inherit;text-decoration:none}.topbar{background:va
 <script>
 (function(){
   "use strict";
-  const key = "super_responder_admin_session_v1";
-  try {
-    const s = JSON.parse(localStorage.getItem(key) || "null");
-    if (!s || !s.access_token) {
-      location.replace("admin-login.html?next=interfaces.html");
+  const SESSION_KEY="super_responder_admin_session_v1";
+  const API="https://quylfcqnzubxedlatzpv.supabase.co/functions/v1/mikrotik-report?action=latest";
+  let session;
+  try { session=JSON.parse(localStorage.getItem(SESSION_KEY)||"null"); } catch (_) {}
+  if(!session||!session.access_token){location.replace("admin-login.html?next=interfaces.html");return;}
+
+  const $=id=>document.getElementById(id);
+  const fmtBytes=n=>{
+    n=Math.max(0,Number(n)||0);
+    if(n<1024)return n+" B";
+    const units=["KB","MB","GB","TB","PB"];let i=-1;
+    do{n/=1024;i++;}while(n>=1024&&i<units.length-1);
+    return n.toFixed(n>=100?0:n>=10?1:2)+" "+units[i];
+  };
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const when=v=>{if(!v)return "—";const d=new Date(v);return Number.isNaN(d.getTime())?"—":d.toLocaleString("ar-YE",{dateStyle:"short",timeStyle:"short"});};
+  function render(data){
+    const notice=$("connectionNotice");
+    if(!data.report){
+      notice.querySelector("strong").textContent="لم يصل تقرير من الميكروتك بعد";
+      notice.querySelector("p").textContent="تم تجهيز استقبال البيانات. بعد ضبط سكربت الراوتر وإرسال أول تقرير ستظهر جميع الواجهات هنا.";
+      $("tableStatus").textContent="بانتظار أول تقرير";
+      $("lastRefresh").textContent="لم يصل أول تقرير";
       return;
     }
-  } catch (_) {
-    location.replace("admin-login.html?next=interfaces.html");
+    const report=data.report, rows=data.interfaces||[];
+    notice.style.display="none";
+    $("routerUptime").textContent=report.router_uptime||"—";
+    $("routerUptime").classList.remove("placeholder");
+    $("interfacesTotal").textContent=String(rows.length);
+    $("interfacesTotal").classList.remove("placeholder");
+    $("interfacesUp").textContent=String(rows.filter(i=>i.running&&!i.disabled).length);
+    $("interfacesUp").classList.remove("placeholder");
+    $("reportTime").textContent=when(report.received_at);
+    $("reportTime").classList.remove("placeholder");
+    $("reportAge").textContent="وقت الاستلام على الخادم";
+    $("lastRefresh").textContent="آخر تحديث "+when(report.received_at);
+    $("tableStatus").textContent=rows.length+" واجهة في آخر تقرير";
+    const tbody=$("interfaceRows");
+    if(!rows.length){tbody.innerHTML='<tr class="empty-row"><td colspan="9"><div class="empty-state"><strong>التقرير وصل لكنه لا يحتوي واجهات</strong></div></td></tr>';return;}
+    tbody.innerHTML=rows.map(i=>{
+      const status=i.disabled?'<span class="status down">معطلة</span>':i.running?'<span class="status up">تعمل</span>':'<span class="status down">متوقفة</span>';
+      const uptime=i.uptime|| (i.running?"غير متاح":"—");
+      return '<tr>'+
+        '<td><span class="interface-name">'+esc(i.name)+'</span></td>'+
+        '<td>'+esc(i.type||"—")+'</td>'+
+        '<td>'+status+'</td>'+
+        '<td>'+esc(uptime)+'</td>'+
+        '<td>'+fmtBytes(i.rx_bytes)+'</td>'+
+        '<td>'+fmtBytes(i.tx_bytes)+'</td>'+
+        '<td>'+fmtBytes(i.daily_rx_bytes)+'</td>'+
+        '<td>'+fmtBytes(i.daily_tx_bytes)+'</td>'+
+        '<td>'+esc(i.last_link_up_time||"—")+'</td>'+
+        '</tr>';
+    }).join("");
   }
+  async function load(){
+    try{
+      const r=await fetch(API,{headers:{apikey:"sb_publishable_9Nl91eoKWdraNH_kw2cCIg_GHRn-IJJ",Authorization:"Bearer "+session.access_token}});
+      const data=await r.json().catch(()=>({}));
+      if(r.status===401){localStorage.removeItem(SESSION_KEY);location.replace("admin-login.html?next=interfaces.html");return;}
+      if(!r.ok||!data.success)throw new Error(data.error||"تعذر جلب التقرير");
+      render(data);
+    }catch(e){
+      $("connectionNotice").style.display="";
+      $("connectionNotice").querySelector("strong").textContent="تعذر تحميل تقرير الواجهات";
+      $("connectionNotice").querySelector("p").textContent="تحقق من اتصال الإنترنت ثم أعد تحميل الصفحة. لم يتم تعديل بيانات الراوتر.";
+      $("tableStatus").textContent="تعذر الاتصال بالخادم";
+    }
+  }
+  load();
+  setInterval(load,60000);
 })();
 </script>
 </body>
