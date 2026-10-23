@@ -4,20 +4,79 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#111827">
-<title>مراقبة واجهات الميكروتك | واي ماكس</title>
+<title>تقرير واجهات الميكروتك | واي ماكس نت</title>
 <style>
-:root{color-scheme:light;--ink:#172033;--muted:#687386;--line:#e4e9f0;--panel:#fff;--bg:#f4f6fa;--navy:#111827;--blue:#2563eb;--blue-soft:#edf4ff;--green:#11845b;--green-soft:#e9f8f0;--amber:#9a6400;--amber-soft:#fff5dc;--red:#b42318;--shadow:0 8px 28px rgba(20,34,60,.055}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Tahoma,Arial,sans-serif;font-size:14px;line-height:1.55}
-button,a{font:inherit}a{color:inherit;text-decoration:none}.topbar{background:var(--navy);color:#fff;padding:0 24px;min-height:76px;display:flex;align-items:center;justify-content:space-between;gap:18px}.brand{display:flex;align-items:center;gap:12px}.brandmark{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(145deg,#4f7df3,#6947d7);font-size:21px;font-weight:700;box-shadow:0 5px 16px #536eea44}.brandname{font-size:17px;font-weight:700}.brandmeta{font-size:12px;color:#c1c9d7;margin-top:2px}.top-actions{display:flex;align-items:center;gap:10px}.toplink{border:1px solid #3e485b;border-radius:10px;padding:9px 13px;color:#e6eaf2;font-size:12px}.toplink:hover{background:#202b3f}
-.wrap{width:min(1460px,100%);margin:auto;padding:26px 24px 40px}.pageheading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px}.eyebrow{color:var(--blue);font-size:12px;font-weight:700;margin-bottom:5px}.pageheading h1{margin:0;font-size:25px;letter-spacing:-.3px}.pageheading p{margin:7px 0 0;color:var(--muted);font-size:13px}.report-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.interval-pill,.refresh-pill{display:flex;align-items:center;gap:8px;border-radius:11px;padding:10px 13px;font-size:12px;font-weight:700;white-space:nowrap}.interval-pill{background:var(--blue-soft);color:#1d4ed8}.refresh-pill{background:#fff;border:1px solid var(--line);color:#4b5565}
-.alert{display:flex;align-items:flex-start;gap:13px;border:1px solid #f0d79c;background:var(--amber-soft);border-radius:14px;padding:15px 17px;margin-bottom:20px}.alert-icon{width:30px;height:30px;flex:0 0 30px;border-radius:9px;display:grid;place-items:center;background:#ffebbc;color:var(--amber);font-size:17px;font-weight:700}.alert strong{display:block;font-size:13px;color:#714b00;margin-bottom:3px}.alert p{margin:0;color:#79591a;font-size:12px}
-.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin-bottom:20px}.metric{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow);min-width:0}.metrichead{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;font-weight:700}.metricicon{height:35px;width:35px;border-radius:11px;display:grid;place-items:center;font-size:17px;background:#f0f3fa}.metricvalue{font-size:25px;font-weight:800;letter-spacing:-.7px;margin-top:15px;min-height:38px}.metricfoot{color:#8a93a3;font-size:11px;margin-top:4px}.metricvalue.placeholder{color:#a2aab8;letter-spacing:2px}
-.content-panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}.panel-head{padding:19px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:1px solid var(--line)}.panel-title{font-size:16px;font-weight:800}.panel-subtitle{font-size:12px;color:var(--muted);margin-top:3px}.panel-badge{display:flex;gap:7px;align-items:center;color:var(--muted);font-size:11px;white-space:nowrap}.dot{height:7px;width:7px;border-radius:50%;background:#c19a3d}
-.table-wrap{width:100%;overflow:auto}table{border-collapse:collapse;width:100%;min-width:1020px;text-align:right}thead{background:#f8f9fc}th{font-size:11px;font-weight:700;color:#667085;padding:14px 17px;white-space:nowrap;border-bottom:1px solid var(--line)}td{padding:15px 17px;border-bottom:1px solid #eef1f5;font-size:12px;color:#465166;white-space:nowrap}tbody tr:last-child td{border-bottom:0}.empty-row td{padding:0;white-space:normal}.empty-state{min-height:255px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:28px;color:var(--muted)}.empty-graphic{width:62px;height:62px;border-radius:19px;display:grid;place-items:center;background:#f0f4ff;color:#5475db;font-size:27px;margin-bottom:15px}.empty-state strong{font-size:14px;color:#344054;margin-bottom:5px}.empty-state p{max-width:450px;margin:0;font-size:12px;line-height:1.9}.status{display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:5px 9px;font-size:11px;font-weight:700}.status.waiting{background:#fff4d8;color:#8a5b00}.status.up{background:var(--green-soft);color:var(--green)}.status.down{background:#fff0ef;color:var(--red)}.interface-name{font-weight:800;color:#243044;direction:ltr;display:inline-block}.unit{color:#7d8798;font-size:10px}
-.note-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:15px;margin-top:18px}.note-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:17px 19px}.note-card h3{font-size:13px;margin:0 0 7px}.note-card p{font-size:12px;color:var(--muted);margin:0;line-height:1.9}.note-label{display:inline-block;font-size:10px;color:#1d4ed8;background:var(--blue-soft);padding:4px 8px;border-radius:7px;margin-bottom:8px}
+:root{color-scheme:light;--ink:#172033;--muted:#687386;--line:#e4e9f0;--panel:#fff;--bg:#f4f6fa;--navy:#111827;--blue:#2563eb;--blue-soft:#edf4ff;--green:#11845b;--green-soft:#e9f8f0;--amber:#9a6400;--amber-soft:#fff5dc;--red:#b42318;--red-soft:#fff0ef;--shadow:0 8px 28px rgba(20,34,60,.055)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Tahoma,Arial,sans-serif;font-size:14px;line-height:1.6}
+button,input,select{font:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.55}
+a{color:inherit;text-decoration:none}
+.topbar{background:var(--navy);color:#fff;padding:0 24px;min-height:76px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brandmark{width:42px;height:42px;flex:0 0 42px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(145deg,#4f7df3,#6947d7);font-size:21px;font-weight:700;box-shadow:0 5px 16px #536eea44}
+.brandname{font-size:17px;font-weight:700}.brandmeta{font-size:12px;color:#c1c9d7;margin-top:2px}
+.top-actions{display:flex;align-items:center;gap:10px}.toplink{border:1px solid #3e485b;border-radius:10px;padding:9px 13px;color:#e6eaf2;font-size:12px;white-space:nowrap}.toplink:hover{background:#202b3f}
+.wrap{width:min(1500px,100%);margin:auto;padding:26px 24px 40px}
+.pageheading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px}
+.eyebrow{color:var(--blue);font-size:12px;font-weight:700;margin-bottom:5px;letter-spacing:.4px}
+.pageheading h1{margin:0;font-size:25px;letter-spacing:-.3px}.pageheading p{margin:7px 0 0;color:var(--muted);font-size:13px}
+.report-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.interval-pill,.refresh-pill{display:flex;align-items:center;gap:8px;border-radius:11px;padding:10px 13px;font-size:12px;font-weight:700;white-space:nowrap}
+.interval-pill{background:var(--blue-soft);color:#1d4ed8}.refresh-pill{background:#fff;border:1px solid var(--line);color:#4b5565}
+.alert{display:flex;align-items:flex-start;gap:13px;border:1px solid #f0d79c;background:var(--amber-soft);border-radius:14px;padding:15px 17px;margin-bottom:20px}
+.alert.error{background:var(--red-soft);border-color:#f2c5c1}.alert.success{background:var(--green-soft);border-color:#b9e8d0}
+.alert-icon{width:30px;height:30px;flex:0 0 30px;border-radius:9px;display:grid;place-items:center;background:#ffebbc;color:var(--amber);font-size:17px;font-weight:700}
+.alert.error .alert-icon{background:#ffdedb;color:var(--red)}.alert.success .alert-icon{background:#d2f3e1;color:var(--green)}
+.alert strong{display:block;font-size:13px;color:#714b00;margin-bottom:3px}.alert p{margin:0;color:#79591a;font-size:12px;line-height:1.8}
+.alert.error strong,.alert.error p{color:#963127}.alert.success strong,.alert.success p{color:#126946}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin-bottom:20px}
+.metric{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow);min-width:0}
+.metrichead{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;font-weight:700}
+.metricicon{height:35px;width:35px;flex:0 0 35px;border-radius:11px;display:grid;place-items:center;font-size:17px;background:#f0f3fa}
+.metricvalue{font-size:25px;font-weight:800;letter-spacing:-.7px;margin-top:15px;min-height:38px;overflow-wrap:anywhere}
+.metricfoot{color:#8a93a3;font-size:11px;margin-top:4px}.metricvalue.placeholder{color:#a2aab8;letter-spacing:2px}
+.content-panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.panel-head{padding:19px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:1px solid var(--line)}
+.panel-title{font-size:16px;font-weight:800}.panel-subtitle{font-size:12px;color:var(--muted);margin-top:3px}
+.panel-badge{display:flex;gap:7px;align-items:center;color:var(--muted);font-size:11px;white-space:nowrap}
+.dot{height:7px;width:7px;border-radius:50%;background:#c19a3d}
+.table-tools{padding:14px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line);background:#fff}
+.search-box{position:relative;flex:1 1 250px;min-width:190px}.search-box span{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#929bad;font-size:15px;pointer-events:none}
+.field{width:100%;border:1px solid #dce2eb;border-radius:10px;background:#fff;color:var(--ink);min-height:40px;padding:9px 12px;outline:none}
+.search-box .field{padding-right:36px}.field:focus{border-color:#7ca0f9;box-shadow:0 0 0 3px #2563eb15}
+.select-field{min-width:145px;max-width:190px}
+.action-btn{min-height:40px;border:1px solid #dce2eb;background:#fff;color:#344054;border-radius:10px;padding:9px 13px;font-weight:700;font-size:12px}
+.action-btn:hover:not(:disabled){background:#f6f8fc;border-color:#c6cfdd}
+.table-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:11px 18px;color:var(--muted);font-size:11px;border-bottom:1px solid var(--line)}
+.state-legend{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.legend-item{display:inline-flex;align-items:center;gap:5px}
+.legend-dot{width:7px;height:7px;border-radius:50%;display:inline-block}.legend-dot.up{background:#1b9d6b}.legend-dot.down{background:#d64b43}.legend-dot.disabled{background:#8b95a5}
+.table-wrap{width:100%;overflow:auto}
+table{border-collapse:separate;border-spacing:0;width:100%;min-width:850px;text-align:right}
+thead{background:#f8f9fc}
+th{font-size:11px;font-weight:700;color:#667085;padding:0 15px;white-space:nowrap;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:1;background:#f8f9fc}
+.sort-btn{display:flex;align-items:center;gap:7px;width:100%;padding:14px 0;border:0;background:transparent;text-align:right;color:inherit;font-weight:700;font-size:11px;white-space:nowrap}
+.sort-btn:hover{color:#1d4ed8}.sort-mark{color:#9aa3b2;font-size:10px}
+td{padding:13px 15px;border-bottom:1px solid #eef1f5;font-size:12px;color:#465166;white-space:nowrap;background:#fff}
+tbody tr:last-child td{border-bottom:0}tbody tr:hover td{background:#fafbfe}
+.empty-row td{padding:0;white-space:normal}.empty-state{min-height:220px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:28px;color:var(--muted)}
+.empty-graphic{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;background:#f0f4ff;color:#5475db;font-size:27px;margin-bottom:13px}
+.empty-state strong{font-size:14px;color:#344054;margin-bottom:5px}.empty-state p{max-width:490px;margin:0;font-size:12px;line-height:1.9}
+.status{display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:5px 9px;font-size:11px;font-weight:700}
+.status.up{background:var(--green-soft);color:var(--green)}.status.down{background:var(--red-soft);color:var(--red)}.status.disabled{background:#eef0f4;color:#5d6675}
+.interface-name{font-weight:800;color:#243044;direction:ltr;display:inline-block}.mono{direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums}
+.pagination{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 18px;border-top:1px solid var(--line);flex-wrap:wrap}
+.page-info{font-size:11px;color:var(--muted)}.page-actions{display:flex;gap:8px;align-items:center}
+.page-btn{min-height:36px;min-width:76px;border:1px solid #dce2eb;background:#fff;color:#344054;border-radius:9px;padding:7px 11px;font-size:11px;font-weight:700}
+.page-btn:hover:not(:disabled){background:#f6f8fc}
+.note-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:15px;margin-top:18px}
+.note-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:17px 19px}
+.note-card h3{font-size:13px;margin:0 0 7px}.note-card p{font-size:12px;color:var(--muted);margin:0;line-height:1.9}
+.note-label{display:inline-block;font-size:10px;color:#1d4ed8;background:var(--blue-soft);padding:4px 8px;border-radius:7px;margin-bottom:8px}
 .footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:#9199a8;font-size:11px;margin-top:18px;padding:0 3px}
 @media(max-width:1050px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.note-grid{grid-template-columns:1fr}.pageheading{flex-direction:column}.report-controls{width:100%}}
-@media(max-width:600px){.topbar{padding:12px 15px;min-height:70px}.brandmark{width:38px;height:38px}.brandname{font-size:14px}.brandmeta{font-size:10px}.toplink{padding:8px;font-size:11px}.wrap{padding:20px 13px 30px}.pageheading h1{font-size:21px}.cards{gap:9px}.metric{padding:13px;border-radius:13px}.metrichead{font-size:11px}.metricicon{width:30px;height:30px}.metricvalue{font-size:21px;margin-top:12px}.metricfoot{font-size:10px}.interval-pill,.refresh-pill{padding:9px 10px}.panel-head{padding:15px}.panel-title{font-size:14px}.footer{font-size:10px}}
+@media(max-width:600px){.topbar{padding:12px 14px;min-height:70px}.brandmark{width:38px;height:38px;flex-basis:38px}.brandname{font-size:14px}.brandmeta{font-size:10px}.toplink{padding:8px;font-size:11px}.wrap{padding:19px 12px 28px}.pageheading h1{font-size:21px}.cards{gap:9px}.metric{padding:13px;border-radius:13px}.metrichead{font-size:11px}.metricicon{width:30px;height:30px;flex-basis:30px}.metricvalue{font-size:20px;margin-top:12px;min-height:31px}.metricfoot{font-size:10px}.interval-pill,.refresh-pill{padding:9px 10px}.panel-head{padding:15px;align-items:flex-start;flex-direction:column}.panel-title{font-size:14px}.table-tools{padding:12px}.select-field{flex:1;min-width:120px}.action-btn{flex:1}.table-summary{padding:10px 12px}.pagination{padding:12px}.footer{font-size:10px}}
 </style>
 </head>
 <body>
@@ -26,32 +85,31 @@ button,a{font:inherit}a{color:inherit;text-decoration:none}.topbar{background:va
     <div class="brandmark" aria-hidden="true">W</div>
     <div><div class="brandname">واي ماكس نت</div><div class="brandmeta">إدارة الشبكة ومراقبة التشغيل</div></div>
   </div>
-  <div class="top-actions">
-    <a class="toplink" href="admin-support.html">العودة إلى الدعم الفني ↗</a>
-  </div>
+  <div class="top-actions"><a class="toplink" href="admin-support.html">العودة إلى الدعم الفني ↗</a></div>
 </header>
+
 <main class="wrap">
   <section class="pageheading">
     <div>
       <div class="eyebrow">NETWORK OPERATIONS</div>
       <h1>تقرير واجهات الميكروتك</h1>
-      <p>ملخص حالة الواجهات، مدة تشغيل الراوتر، وحركة البيانات الواردة والصادرة.</p>
+      <p>عرض حالة الواجهات وعدادات البيانات، مع ملخص مدة تشغيل الراوتر وآخر تقرير محفوظ.</p>
     </div>
     <div class="report-controls">
-      <div class="interval-pill"><span aria-hidden="true">◷</span> إرسال تقرير جديد كل ساعة</div>
-      <div class="refresh-pill"><span aria-hidden="true">↻</span> <span id="lastRefresh">لم يصل أول تقرير</span></div>
+      <div class="interval-pill"><span aria-hidden="true">◷</span> الإرسال كل ساعة</div>
+      <div class="refresh-pill"><span aria-hidden="true">↻</span><span id="lastRefresh">جارٍ تحميل التقرير...</span></div>
     </div>
   </section>
 
-  <section class="alert" id="connectionNotice" role="status">
-    <div class="alert-icon" aria-hidden="true">!</div>
-    <div><strong>بانتظار ربط الميكروتك</strong><p>التصميم جاهز، لكن لم يتم توصيل مصدر البيانات بعد. لن تظهر أرقام افتراضية حتى لا تختلط بيانات المثال بالإحصاءات الفعلية.</p></div>
+  <section class="alert" id="connectionNotice" role="status" aria-live="polite">
+    <div class="alert-icon" id="noticeIcon" aria-hidden="true">…</div>
+    <div><strong id="noticeTitle">جارٍ الاتصال بالخادم</strong><p id="noticeMessage">يتم تحميل آخر تقرير محفوظ من الميكروتك.</p></div>
   </section>
 
   <section class="cards" aria-label="ملخص الراوتر">
     <article class="metric">
       <div class="metrichead"><span>مدة تشغيل الراوتر</span><span class="metricicon" aria-hidden="true">◴</span></div>
-      <div class="metricvalue placeholder" id="routerUptime">— —</div>
+      <div class="metricvalue placeholder" id="routerUptime">—</div>
       <div class="metricfoot">منذ آخر إعادة تشغيل للنظام</div>
     </article>
     <article class="metric">
@@ -62,116 +120,283 @@ button,a{font:inherit}a{color:inherit;text-decoration:none}.topbar{background:va
     <article class="metric">
       <div class="metrichead"><span>واجهات تعمل</span><span class="metricicon" aria-hidden="true">●</span></div>
       <div class="metricvalue placeholder" id="interfacesUp">—</div>
-      <div class="metricfoot">الواجهات النشطة وقت أخذ القراءة</div>
+      <div class="metricfoot">الواجهات النشطة وغير المعطلة</div>
     </article>
     <article class="metric">
-      <div class="metrichead"><span>آخر تقرير مستلم</span><span class="metricicon" aria-hidden="true">◷</span></div>
-      <div class="metricvalue placeholder" id="reportTime" style="font-size:19px">—</div>
-      <div class="metricfoot" id="reportAge">سيظهر الوقت بعد الربط</div>
+      <div class="metrichead"><span>وقت آخر تقرير</span><span class="metricicon" aria-hidden="true">◷</span></div>
+      <div class="metricvalue placeholder" id="reportTime" style="font-size:17px">—</div>
+      <div class="metricfoot" id="reportAge">سيظهر بعد وصول أول تقرير</div>
     </article>
   </section>
 
   <section class="content-panel">
     <div class="panel-head">
-      <div><div class="panel-title">تفاصيل الواجهات</div><div class="panel-subtitle">إجمالي RX/TX ومدة اتصال كل واجهة، إضافة إلى الاستهلاك المسجل خلال اليوم.</div></div>
-      <div class="panel-badge"><span class="dot"></span><span id="tableStatus">لا توجد بيانات مباشرة حتى الآن</span></div>
+      <div><div class="panel-title">جدول تفاصيل الواجهات</div><div class="panel-subtitle">رتّب النتائج أو ابحث عن واجهة محددة، ثم صفِّ النتائج حسب الحالة.</div></div>
+      <div class="panel-badge"><span class="dot" id="tableDot"></span><span id="tableStatus">بانتظار البيانات</span></div>
     </div>
+
+    <div class="table-tools" aria-label="أدوات تصفية الجدول">
+      <label class="search-box"><span aria-hidden="true">⌕</span><input class="field" id="searchInput" type="search" placeholder="بحث باسم الواجهة أو النوع..." autocomplete="off" aria-label="بحث باسم الواجهة أو النوع"></label>
+      <select class="field select-field" id="statusFilter" aria-label="تصفية حسب حالة الواجهة">
+        <option value="all">كل الحالات</option>
+        <option value="running">تعمل</option>
+        <option value="stopped">متوقفة</option>
+        <option value="disabled">معطلة</option>
+      </select>
+      <select class="field select-field" id="pageSize" aria-label="عدد الصفوف في الصفحة">
+        <option value="25">25 صفًا</option>
+        <option value="50" selected>50 صفًا</option>
+        <option value="100">100 صف</option>
+      </select>
+      <button class="action-btn" id="refreshBtn" type="button">↻ تحديث الآن</button>
+    </div>
+
+    <div class="table-summary">
+      <span id="resultsSummary">لا توجد بيانات معروضة</span>
+      <div class="state-legend" aria-label="معاني الحالات">
+        <span class="legend-item"><i class="legend-dot up"></i> تعمل</span>
+        <span class="legend-item"><i class="legend-dot down"></i> متوقفة</span>
+        <span class="legend-item"><i class="legend-dot disabled"></i> معطلة</span>
+      </div>
+    </div>
+
     <div class="table-wrap">
       <table aria-label="تفاصيل واجهات الميكروتك">
         <thead><tr>
-          <th>اسم الواجهة</th><th>النوع</th><th>الحالة</th><th>مدة اتصال الواجهة</th>
-          <th>التنزيل RX</th><th>الرفع TX</th><th>تنزيل اليوم</th><th>رفع اليوم</th><th>آخر تغير للحالة</th>
+          <th scope="col"><button class="sort-btn" type="button" data-sort="name">اسم الواجهة <span class="sort-mark" id="sort-name">↑</span></button></th>
+          <th scope="col"><button class="sort-btn" type="button" data-sort="type">النوع <span class="sort-mark" id="sort-type">↕</span></button></th>
+          <th scope="col"><button class="sort-btn" type="button" data-sort="state">الحالة <span class="sort-mark" id="sort-state">↕</span></button></th>
+          <th scope="col"><button class="sort-btn" type="button" data-sort="rx_bytes">إجمالي التنزيل RX <span class="sort-mark" id="sort-rx_bytes">↕</span></button></th>
+          <th scope="col"><button class="sort-btn" type="button" data-sort="tx_bytes">إجمالي الرفع TX <span class="sort-mark" id="sort-tx_bytes">↕</span></button></th>
+          <th scope="col"><button class="sort-btn" type="button" data-sort="daily_rx_bytes">تنزيل اليوم¹ <span class="sort-mark" id="sort-daily_rx_bytes">↕</span></button></th>
+          <th scope="col"><button class="sort-btn" type="button" data-sort="daily_tx_bytes">رفع اليوم¹ <span class="sort-mark" id="sort-daily_tx_bytes">↕</span></button></th>
         </tr></thead>
         <tbody id="interfaceRows">
-          <tr class="empty-row"><td colspan="9"><div class="empty-state">
-            <div class="empty-graphic" aria-hidden="true">⌁</div>
-            <strong>لم تصل بيانات من الميكروتك بعد</strong>
-            <p>بعد إعداد سكربت الإرسال وجدولة التقرير كل ساعة، ستظهر هنا الواجهات الفعلية مع حالتها ومدد اتصالها وعدادات التنزيل والرفع. يبدأ حساب الاستهلاك اليومي من أول قراءة محفوظة.</p>
-          </div></td></tr>
+          <tr class="empty-row"><td colspan="7"><div class="empty-state"><div class="empty-graphic" aria-hidden="true">⌁</div><strong>جارٍ تحميل بيانات الواجهات</strong><p>سيظهر الجدول بعد جلب آخر تقرير محفوظ.</p></div></td></tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="pagination">
+      <span class="page-info" id="pageInfo">الصفحة 1</span>
+      <div class="page-actions">
+        <button class="page-btn" id="prevPage" type="button" disabled>السابق</button>
+        <button class="page-btn" id="nextPage" type="button" disabled>التالي</button>
+      </div>
     </div>
   </section>
 
   <section class="note-grid">
-    <article class="note-card"><span class="note-label">طريقة الاتصال</span><h3>إرسال آمن من الراوتر إلى التقرير</h3><p>سيُرسل الميكروتك ملخص الواجهات إلى الخادم عبر HTTPS مرة كل ساعة. لا يحتاج التصميم إلى فتح منفذ إدارة API للراوتر على الإنترنت.</p></article>
-    <article class="note-card"><span class="note-label">دقة القراءات</span><h3>العدادات التراكمية والاستهلاك اليومي</h3><p>إجمالي RX/TX مأخوذ من عدادات الواجهة. أما استهلاك اليوم فيُحسب من الفرق بين القراءات المحفوظة، مع معالجة إعادة التشغيل أو تصفير العدادات.</p></article>
+    <article class="note-card"><span class="note-label">معلومة التشغيل</span><h3>مدة التشغيل تخص الراوتر</h3><p>مدة تشغيل الراوتر معروضة في بطاقة الملخص. لا نعرضها كأنها مدة اتصال مستقلة لكل واجهة، لأن السكربت الحالي يرسل مدة تشغيل النظام ولا يرسل زمن آخر اتصال فعلي لكل واجهة.</p></article>
+    <article class="note-card"><span class="note-label">طريقة احتساب الاستهلاك</span><h3>قراءات اليوم والعدادات التراكمية</h3><p>عدادات RX/TX هي الإجماليات التي يرسلها الراوتر. أرقام اليوم محسوبة من الفرق بين أول قراءة محفوظة اليوم وآخر قراءة، لذلك قد لا تشمل الحركة التي سبقت أول تقرير وصل في ذلك اليوم.</p></article>
   </section>
-  <footer class="footer"><span>واي ماكس نت · لوحة مراقبة الشبكة</span><span>تحديث البيانات المخطط: كل 60 دقيقة</span></footer>
+  <footer class="footer"><span>واي ماكس نت · لوحة مراقبة الشبكة</span><span>تحديث تلقائي كل 60 ثانية · إرسال الراوتر كل ساعة</span></footer>
 </main>
+
 <script>
 (function(){
   "use strict";
   const SESSION_KEY="super_responder_admin_session_v1";
   const API="https://quylfcqnzubxedlatzpv.supabase.co/functions/v1/mikrotik-report?action=latest";
   let session;
-  try { session=JSON.parse(localStorage.getItem(SESSION_KEY)||"null"); } catch (_) {}
+  try{session=JSON.parse(localStorage.getItem(SESSION_KEY)||"null");}catch(_){}
   if(!session||!session.access_token){location.replace("admin-login.html?next=interfaces.html");return;}
 
   const $=id=>document.getElementById(id);
-  const fmtBytes=n=>{
-    n=Math.max(0,Number(n)||0);
-    if(n<1024)return n+" B";
-    const units=["KB","MB","GB","TB","PB"];let i=-1;
+  let allRows=[];
+  let currentPage=1;
+  let pageSize=50;
+  let sortKey="name";
+  let sortDirection=1;
+  let isLoading=false;
+  let hasReport=false;
+
+  const fmtBytes=value=>{
+    let n=Math.max(0,Number(value)||0);
+    if(n<1024)return Math.round(n)+" B";
+    const units=["KB","MB","GB","TB","PB"];
+    let i=-1;
     do{n/=1024;i++;}while(n>=1024&&i<units.length-1);
     return n.toFixed(n>=100?0:n>=10?1:2)+" "+units[i];
   };
-  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  const when=v=>{if(!v)return "—";const d=new Date(v);return Number.isNaN(d.getTime())?"—":d.toLocaleString("ar-YE",{dateStyle:"short",timeStyle:"short"});};
-  function render(data){
-    const notice=$("connectionNotice");
-    if(!data.report){
-      notice.querySelector("strong").textContent="لم يصل تقرير من الميكروتك بعد";
-      notice.querySelector("p").textContent="تم تجهيز استقبال البيانات. بعد ضبط سكربت الراوتر وإرسال أول تقرير ستظهر جميع الواجهات هنا.";
-      $("tableStatus").textContent="بانتظار أول تقرير";
-      $("lastRefresh").textContent="لم يصل أول تقرير";
+  const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const when=value=>{
+    if(!value)return "—";
+    const d=new Date(value);
+    return Number.isNaN(d.getTime())?"—":d.toLocaleString("ar-YE",{dateStyle:"short",timeStyle:"short"});
+  };
+  const stateOf=row=>row.disabled?"disabled":row.running?"running":"stopped";
+  const stateLabel=row=>row.disabled?"معطلة":row.running?"تعمل":"متوقفة";
+  const stateHtml=row=>{
+    const state=stateOf(row);
+    const cls=state==="disabled"?"disabled":state==="running"?"up":"down";
+    return '<span class="status '+cls+'">'+stateLabel(row)+'</span>';
+  };
+  function setNotice(title,message,type){
+    const box=$("connectionNotice");
+    box.className="alert"+(type?" "+type:"");
+    box.style.display="";
+    $("noticeTitle").textContent=title;
+    $("noticeMessage").textContent=message;
+    $("noticeIcon").textContent=type==="error"?"!":type==="success"?"✓":"…";
+  }
+  function hideNotice(){$("connectionNotice").style.display="none";}
+  function setPlaceholder(id,value){
+    $(id).textContent=value;
+    $(id).classList.add("placeholder");
+  }
+  function setMetric(id,value){
+    $(id).textContent=value;
+    $(id).classList.remove("placeholder");
+  }
+  function updateSortMarks(){
+    ["name","type","state","rx_bytes","tx_bytes","daily_rx_bytes","daily_tx_bytes"].forEach(key=>{
+      const mark=$("sort-"+key);
+      if(mark)mark.textContent=key===sortKey?(sortDirection===1?"↑":"↓"):"↕";
+    });
+  }
+  function filteredRows(){
+    const term=$("searchInput").value.trim().toLocaleLowerCase("ar");
+    const filter=$("statusFilter").value;
+    const rows=allRows.filter(row=>{
+      const searchable=(String(row.name||"")+" "+String(row.type||"")).toLocaleLowerCase("ar");
+      if(term&&!searchable.includes(term))return false;
+      if(filter!=="all"&&stateOf(row)!==filter)return false;
+      return true;
+    });
+    rows.sort((a,b)=>{
+      let av,bv;
+      if(sortKey==="state"){
+        const rank={running:0,stopped:1,disabled:2};
+        av=rank[stateOf(a)];bv=rank[stateOf(b)];
+      }else if(["rx_bytes","tx_bytes","daily_rx_bytes","daily_tx_bytes"].includes(sortKey)){
+        av=Number(a[sortKey])||0;bv=Number(b[sortKey])||0;
+      }else{
+        av=String(a[sortKey]||"").toLocaleLowerCase("ar");
+        bv=String(b[sortKey]||"").toLocaleLowerCase("ar");
+      }
+      if(av<bv)return -1*sortDirection;
+      if(av>bv)return 1*sortDirection;
+      return 0;
+    });
+    return rows;
+  }
+  function showEmpty(message,detail){
+    $("interfaceRows").innerHTML='<tr class="empty-row"><td colspan="7"><div class="empty-state"><div class="empty-graphic" aria-hidden="true">⌕</div><strong>'+esc(message)+'</strong><p>'+esc(detail||"")+'</p></div></td></tr>';
+  }
+  function renderTable(){
+    updateSortMarks();
+    const rows=filteredRows();
+    const total=rows.length;
+    const pages=Math.max(1,Math.ceil(total/pageSize));
+    if(currentPage>pages)currentPage=pages;
+    if(currentPage<1)currentPage=1;
+    const start=total?(currentPage-1)*pageSize:0;
+    const visible=rows.slice(start,start+pageSize);
+    $("resultsSummary").textContent=total?("عرض "+(start+1)+"–"+Math.min(start+pageSize,total)+" من "+total+" واجهة بعد التصفية"):"لا توجد نتائج مطابقة";
+    $("pageInfo").textContent="الصفحة "+currentPage+" من "+pages;
+    $("prevPage").disabled=currentPage<=1;
+    $("nextPage").disabled=currentPage>=pages||total===0;
+    if(!allRows.length){
+      showEmpty("لم يصل تقرير يحتوي على واجهات","بعد وصول التقرير من الراوتر ستظهر الواجهات هنا.");
+      $("resultsSummary").textContent="لا توجد بيانات معروضة";
+      $("pageInfo").textContent="الصفحة 1";
+      $("prevPage").disabled=true;$("nextPage").disabled=true;
       return;
     }
-    const report=data.report, rows=data.interfaces||[];
-    notice.style.display="none";
-    $("routerUptime").textContent=report.router_uptime||"—";
-    $("routerUptime").classList.remove("placeholder");
-    $("interfacesTotal").textContent=String(rows.length);
-    $("interfacesTotal").classList.remove("placeholder");
-    $("interfacesUp").textContent=String(rows.filter(i=>i.running&&!i.disabled).length);
-    $("interfacesUp").classList.remove("placeholder");
-    $("reportTime").textContent=when(report.received_at);
-    $("reportTime").classList.remove("placeholder");
+    if(!visible.length){
+      showEmpty("لا توجد واجهات مطابقة","غيّر كلمة البحث أو اختر حالة أخرى لعرض النتائج.");
+      return;
+    }
+    $("interfaceRows").innerHTML=visible.map(row=>
+      "<tr>"+
+      '<td><span class="interface-name">'+esc(row.name||"—")+"</span></td>"+
+      "<td>"+esc(row.type||"—")+"</td>"+
+      "<td>"+stateHtml(row)+"</td>"+
+      '<td><span class="mono">'+fmtBytes(row.rx_bytes)+"</span></td>"+
+      '<td><span class="mono">'+fmtBytes(row.tx_bytes)+"</span></td>"+
+      '<td><span class="mono">'+fmtBytes(row.daily_rx_bytes)+"</span></td>"+
+      '<td><span class="mono">'+fmtBytes(row.daily_tx_bytes)+"</span></td>"+
+      "</tr>"
+    ).join("");
+  }
+  function render(data){
+    const report=data.report;
+    if(!report){
+      hasReport=false;
+      allRows=[];
+      setPlaceholder("routerUptime","—");
+      setPlaceholder("interfacesTotal","—");
+      setPlaceholder("interfacesUp","—");
+      setPlaceholder("reportTime","—");
+      $("reportAge").textContent="سيظهر بعد وصول أول تقرير";
+      $("lastRefresh").textContent="لم يصل أول تقرير";
+      $("tableStatus").textContent="بانتظار أول تقرير";
+      $("tableDot").style.background="#c19a3d";
+      setNotice("لم يصل تقرير من الميكروتك بعد","الاتصال بالخادم يعمل، لكن لا توجد قراءة محفوظة لهذا الراوتر حتى الآن.");
+      renderTable();
+      return;
+    }
+    hasReport=true;
+    allRows=Array.isArray(data.interfaces)?data.interfaces:[];
+    const active=allRows.filter(row=>row.running===true&&row.disabled!==true).length;
+    setMetric("routerUptime",report.router_uptime||"—");
+    setMetric("interfacesTotal",String(allRows.length));
+    setMetric("interfacesUp",String(active));
+    setMetric("reportTime",when(report.received_at));
     $("reportAge").textContent="وقت الاستلام على الخادم";
-    $("lastRefresh").textContent="آخر تحديث "+when(report.received_at);
-    $("tableStatus").textContent=rows.length+" واجهة في آخر تقرير";
-    const tbody=$("interfaceRows");
-    if(!rows.length){tbody.innerHTML='<tr class="empty-row"><td colspan="9"><div class="empty-state"><strong>التقرير وصل لكنه لا يحتوي واجهات</strong></div></td></tr>';return;}
-    tbody.innerHTML=rows.map(i=>{
-      const status=i.disabled?'<span class="status down">معطلة</span>':i.running?'<span class="status up">تعمل</span>':'<span class="status down">متوقفة</span>';
-      const uptime=i.uptime|| (i.running?"غير متاح":"—");
-      return '<tr>'+
-        '<td><span class="interface-name">'+esc(i.name)+'</span></td>'+
-        '<td>'+esc(i.type||"—")+'</td>'+
-        '<td>'+status+'</td>'+
-        '<td>'+esc(uptime)+'</td>'+
-        '<td>'+fmtBytes(i.rx_bytes)+'</td>'+
-        '<td>'+fmtBytes(i.tx_bytes)+'</td>'+
-        '<td>'+fmtBytes(i.daily_rx_bytes)+'</td>'+
-        '<td>'+fmtBytes(i.daily_tx_bytes)+'</td>'+
-        '<td>'+esc(i.last_link_up_time||"—")+'</td>'+
-        '</tr>';
-    }).join("");
+    $("lastRefresh").textContent="آخر تقرير: "+when(report.received_at);
+    $("tableStatus").textContent=allRows.length+" واجهة في آخر تقرير";
+    $("tableDot").style.background="#1b9d6b";
+    hideNotice();
+    currentPage=1;
+    renderTable();
   }
   async function load(){
+    if(isLoading)return;
+    isLoading=true;
+    $("refreshBtn").disabled=true;
+    $("refreshBtn").textContent="جارٍ التحديث...";
     try{
-      const r=await fetch(API,{headers:{apikey:"sb_publishable_9Nl91eoKWdraNH_kw2cCIg_GHRn-IJJ",Authorization:"Bearer "+session.access_token}});
-      const data=await r.json().catch(()=>({}));
-      if(r.status===401){localStorage.removeItem(SESSION_KEY);location.replace("admin-login.html?next=interfaces.html");return;}
-      if(!r.ok||!data.success)throw new Error(data.error||"تعذر جلب التقرير");
+      const response=await fetch(API,{headers:{apikey:"sb_publishable_9Nl91eoKWdraNH_kw2cCIg_GHRn-IJJ",Authorization:"Bearer "+session.access_token},cache:"no-store"});
+      const data=await response.json().catch(()=>({}));
+      if(response.status===401){
+        localStorage.removeItem(SESSION_KEY);
+        location.replace("admin-login.html?next=interfaces.html");
+        return;
+      }
+      if(response.status===403){
+        throw new Error("الحساب الحالي لا يملك صلاحية عرض تقرير الشبكة.");
+      }
+      if(!response.ok||!data.success)throw new Error(data.error||"تعذر جلب التقرير من الخادم.");
       render(data);
-    }catch(e){
-      $("connectionNotice").style.display="";
-      $("connectionNotice").querySelector("strong").textContent="تعذر تحميل تقرير الواجهات";
-      $("connectionNotice").querySelector("p").textContent="تحقق من اتصال الإنترنت ثم أعد تحميل الصفحة. لم يتم تعديل بيانات الراوتر.";
-      $("tableStatus").textContent="تعذر الاتصال بالخادم";
+    }catch(error){
+      const message=error&&error.message?error.message:"تحقق من اتصال الإنترنت ثم حاول مجددًا.";
+      setNotice(hasReport?"تعذر تحديث التقرير":"تعذر تحميل التقرير",hasReport?"تعذر الاتصال الآن. ما زالت آخر بيانات ناجحة معروضة في الجدول. "+message:message,"error");
+      $("tableStatus").textContent="تعذر تحديث البيانات";
+      $("tableDot").style.background="#d64b43";
+    }finally{
+      isLoading=false;
+      $("refreshBtn").disabled=false;
+      $("refreshBtn").textContent="↻ تحديث الآن";
     }
   }
+
+  $("searchInput").addEventListener("input",()=>{currentPage=1;renderTable();});
+  $("statusFilter").addEventListener("change",()=>{currentPage=1;renderTable();});
+  $("pageSize").addEventListener("change",()=>{pageSize=Number($("pageSize").value)||50;currentPage=1;renderTable();});
+  $("prevPage").addEventListener("click",()=>{currentPage--;renderTable();});
+  $("nextPage").addEventListener("click",()=>{currentPage++;renderTable();});
+  $("refreshBtn").addEventListener("click",load);
+  document.querySelectorAll("[data-sort]").forEach(button=>button.addEventListener("click",()=>{
+    const key=button.getAttribute("data-sort");
+    if(sortKey===key)sortDirection*=-1;
+    else{sortKey=key;sortDirection=1;}
+    currentPage=1;
+    renderTable();
+  }));
+  pageSize=Number($("pageSize").value)||50;
+  renderTable();
   load();
   setInterval(load,60000);
 })();
